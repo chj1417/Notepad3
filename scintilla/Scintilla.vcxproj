@@ -115,7 +115,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>include;lexlib;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;lexlib;src;..\re2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -136,7 +136,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>include;lexlib;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;lexlib;src;..\re2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -157,7 +157,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>include;lexlib;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;lexlib;src;..\re2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <EnableEnhancedInstructionSet Condition="'$(VisualStudioVersion)'&gt;'10.0'">NoExtensions</EnableEnhancedInstructionSet>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -175,7 +175,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>include;lexlib;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;lexlib;src;..\re2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>MaxSpeed</Optimization>
@@ -193,7 +193,28 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="deelx\DeelxRegexSearch.cxx" />
+    <ClCompile Include="..\re2\re2\bitstate.cc" />
+    <ClCompile Include="..\re2\re2\compile.cc" />
+    <ClCompile Include="..\re2\re2\dfa.cc" />
+    <ClCompile Include="..\re2\re2\filtered_re2.cc" />
+    <ClCompile Include="..\re2\re2\mimics_pcre.cc" />
+    <ClCompile Include="..\re2\re2\nfa.cc" />
+    <ClCompile Include="..\re2\re2\onepass.cc" />
+    <ClCompile Include="..\re2\re2\parse.cc" />
+    <ClCompile Include="..\re2\re2\perl_groups.cc" />
+    <ClCompile Include="..\re2\re2\prefilter.cc" />
+    <ClCompile Include="..\re2\re2\prefilter_tree.cc" />
+    <ClCompile Include="..\re2\re2\prog.cc" />
+    <ClCompile Include="..\re2\re2\re2.cc" />
+    <ClCompile Include="..\re2\re2\regexp.cc" />
+    <ClCompile Include="..\re2\re2\set.cc" />
+    <ClCompile Include="..\re2\re2\simplify.cc" />
+    <ClCompile Include="..\re2\re2\stringpiece.cc" />
+    <ClCompile Include="..\re2\re2\tostring.cc" />
+    <ClCompile Include="..\re2\re2\unicode_casefold.cc" />
+    <ClCompile Include="..\re2\re2\unicode_groups.cc" />
+    <ClCompile Include="..\re2\util\rune.cc" />
+    <ClCompile Include="..\re2\util\strutil.cc" />
     <ClCompile Include="lexers\LexAHK.cxx" />
     <ClCompile Include="lexers\LexAsm.cxx" />
     <ClCompile Include="lexers\LexAU3.cxx" />
@@ -241,6 +262,7 @@
     <ClCompile Include="lexlib\PropSetSimple.cxx" />
     <ClCompile Include="lexlib\StyleContext.cxx" />
     <ClCompile Include="lexlib\WordList.cxx" />
+    <ClCompile Include="re2\RE2Interface.cxx" />
     <ClCompile Include="src\AutoComplete.cxx" />
     <ClCompile Include="src\CallTip.cxx" />
     <ClCompile Include="src\CaseConvert.cxx" />
@@ -275,8 +297,19 @@
     <ClCompile Include="win32\ScintillaWin.cxx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="deelx\deelx.h" />
-    <ClInclude Include="deelx\deelx64.h" />
+    <ClInclude Include="..\re2\re2\bitmap256.h" />
+    <ClInclude Include="..\re2\re2\filtered_re2.h" />
+    <ClInclude Include="..\re2\re2\prefilter.h" />
+    <ClInclude Include="..\re2\re2\prefilter_tree.h" />
+    <ClInclude Include="..\re2\re2\prog.h" />
+    <ClInclude Include="..\re2\re2\re2.h" />
+    <ClInclude Include="..\re2\re2\regexp.h" />
+    <ClInclude Include="..\re2\re2\set.h" />
+    <ClInclude Include="..\re2\re2\stringpiece.h" />
+    <ClInclude Include="..\re2\re2\unicode_casefold.h" />
+    <ClInclude Include="..\re2\re2\unicode_groups.h" />
+    <ClInclude Include="..\re2\re2\walker-inl.h" />
+    <ClInclude Include="..\re2\util\strutil.h" />
     <ClInclude Include="include\ILexer.h" />
     <ClInclude Include="include\ILoader.h" />
     <ClInclude Include="include\Platform.h" />
@@ -336,9 +369,6 @@
     <ClInclude Include="src\ViewStyle.h" />
     <ClInclude Include="src\XPM.h" />
     <ClInclude Include="win32\PlatWin.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="deelx\doc\deelx_en.chm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

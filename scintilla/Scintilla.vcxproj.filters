@@ -16,11 +16,14 @@
     <Filter Include="win32">
       <UniqueIdentifier>{afe7e35e-cd81-406c-a770-df29d2b3fc95}</UniqueIdentifier>
     </Filter>
-    <Filter Include="deelx">
-      <UniqueIdentifier>{67242aad-9133-44e7-9774-c36f5a9194bc}</UniqueIdentifier>
+    <Filter Include="re2">
+      <UniqueIdentifier>{93897486-a572-428b-90d2-cc74970f4590}</UniqueIdentifier>
     </Filter>
-    <Filter Include="deelx\doc">
-      <UniqueIdentifier>{4e167b73-0447-4a31-a66b-64c2d684516d}</UniqueIdentifier>
+    <Filter Include="re2\re2">
+      <UniqueIdentifier>{8a9ee512-306b-49b7-a068-de7792ec7ca6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="re2\util">
+      <UniqueIdentifier>{5ee03c26-415d-4411-84fb-c603833d4699}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -243,9 +246,6 @@
     <ClCompile Include="win32\ScintillaWin.cxx">
       <Filter>win32</Filter>
     </ClCompile>
-    <ClCompile Include="deelx\DeelxRegexSearch.cxx">
-      <Filter>deelx</Filter>
-    </ClCompile>
     <ClCompile Include="lexers\LexJSON.cxx">
       <Filter>lexers</Filter>
     </ClCompile>
@@ -263,6 +263,75 @@
     </ClCompile>
     <ClCompile Include="lexers\LexD.cxx">
       <Filter>lexers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\bitstate.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\compile.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\dfa.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\filtered_re2.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\mimics_pcre.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\nfa.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\onepass.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\parse.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\perl_groups.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\prefilter.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\prefilter_tree.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\prog.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\re2.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\regexp.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\set.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\simplify.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\stringpiece.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\tostring.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\unicode_casefold.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\re2\unicode_groups.cc">
+      <Filter>re2\re2</Filter>
+    </ClCompile>
+    <ClCompile Include="re2\RE2Interface.cxx">
+      <Filter>re2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\util\rune.cc">
+      <Filter>re2\util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\re2\util\strutil.cc">
+      <Filter>re2\util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -425,9 +494,6 @@
     <ClInclude Include="win32\PlatWin.h">
       <Filter>win32</Filter>
     </ClInclude>
-    <ClInclude Include="deelx\deelx64.h">
-      <Filter>deelx</Filter>
-    </ClInclude>
     <ClInclude Include="include\Sci_Position.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -446,13 +512,44 @@
     <ClInclude Include="include\ILoader.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="deelx\deelx.h">
-      <Filter>deelx</Filter>
+    <ClInclude Include="..\re2\re2\bitmap256.h">
+      <Filter>re2\re2</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="deelx\doc\deelx_en.chm">
-      <Filter>deelx\doc</Filter>
-    </None>
+    <ClInclude Include="..\re2\re2\filtered_re2.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\prefilter.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\prefilter_tree.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\prog.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\re2.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\regexp.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\set.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\stringpiece.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\unicode_casefold.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\unicode_groups.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\re2\walker-inl.h">
+      <Filter>re2\re2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\re2\util\strutil.h">
+      <Filter>re2\util</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
