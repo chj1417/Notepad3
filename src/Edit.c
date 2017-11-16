@@ -4948,8 +4948,10 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
               break;
 
             case IDC_REPLACE:
-              bReplaceInitialized = TRUE;
-              EditReplace(lpefr->hwnd, lpefr);
+              {
+                bReplaceInitialized = TRUE;
+                EditReplace(lpefr->hwnd, lpefr);
+              }
               break;
 
             case IDC_REPLACEALL:
@@ -5338,6 +5340,26 @@ BOOL EditReplace(HWND hwnd, LPCEDITFINDREPLACE lpefr) {
     return FALSE; // recoding of clipboard canceled
 
   // w/o selection, replacement string is put into current position
+  // but this mayby not intended here
+  if ((BOOL)SendMessage(hwnd, SCI_GETSELECTIONEMPTY, 0, 0)) {
+    int start = (int)SendMessage(hwnd, SCI_GETCURRENTPOS, 0, 0);
+    int end = (int)SendMessage(hwnd, SCI_GETTEXTLENGTH, start, 0);
+    int _start = start;
+    int iPos = EditFindInTarget(hwnd, lpefr->szFind,
+      StringCchLenA(lpefr->szFind, FNDRPL_BUFFER),
+      (int)(lpefr->fuFlags), &start, &end, FALSE);
+    if ((iPos < 0) || (_start != start) || (_start != end))  {
+      // empty-replace was not intended
+      LocalFree(pszReplace);
+      if (iPos < 0)
+        return EditFindNext(hwnd, lpefr, FALSE);
+      else {
+        EditSelectEx(hwnd, start, end);
+        return TRUE;
+      }
+    }
+  }
+
   SendMessage(hwnd, SCI_TARGETFROMSELECTION, 0, 0);
   SendMessage(hwnd, iReplaceMsg, (WPARAM)-1, (LPARAM)pszReplace);
   
