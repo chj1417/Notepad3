@@ -4948,10 +4948,8 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
               break;
 
             case IDC_REPLACE:
-              {
                 bReplaceInitialized = TRUE;
                 EditReplace(lpefr->hwnd, lpefr);
-              }
               break;
 
             case IDC_REPLACEALL:
@@ -5505,8 +5503,7 @@ BOOL EditReplaceAllInSelection(HWND hwnd,LPCEDITFINDREPLACE lpefr,BOOL bShowInfo
 
 //=============================================================================
 //
-//  EditMarkAll()
-//  Mark all occurrences of the text currently selected (by Aleksandar Lekov)
+//  EditClearAllMarks()
 //
 void EditClearAllMarks(HWND hwnd)
 {
@@ -5517,6 +5514,9 @@ void EditClearAllMarks(HWND hwnd)
 
 
 //=============================================================================
+//
+//  EditMarkAll()
+//  Mark all occurrences of the text currently selected (by Aleksandar Lekov)
 //
 void EditMarkAll(HWND hwnd, char* pszFind, int flags, BOOL bMatchCase, BOOL bMatchWords)
 {
@@ -6392,11 +6392,11 @@ INT_PTR CALLBACK EditSortDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam
           CheckRadioButton(hwnd,100,102,101);
         else if (*piSortFlags & SORT_SHUFFLE) {
           CheckRadioButton(hwnd,100,102,102);
-          EnableWindow(GetDlgItem(hwnd,103),FALSE);
-          EnableWindow(GetDlgItem(hwnd,104),FALSE);
-          EnableWindow(GetDlgItem(hwnd,105),FALSE);
-          EnableWindow(GetDlgItem(hwnd,106),FALSE);
-          EnableWindow(GetDlgItem(hwnd,107),FALSE);
+          DialogEnableWindow(hwnd,103,FALSE);
+          DialogEnableWindow(hwnd,104,FALSE);
+          DialogEnableWindow(hwnd,105,FALSE);
+          DialogEnableWindow(hwnd,106,FALSE);
+          DialogEnableWindow(hwnd,107,FALSE);
         }
         else
           CheckRadioButton(hwnd,100,102,100);
@@ -6404,7 +6404,7 @@ INT_PTR CALLBACK EditSortDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam
           CheckDlgButton(hwnd,103,BST_CHECKED);
         if (*piSortFlags & SORT_UNIQDUP) {
           CheckDlgButton(hwnd,104,BST_CHECKED);
-          EnableWindow(GetDlgItem(hwnd,103),FALSE);
+          DialogEnableWindow(hwnd,103,FALSE);
         }
         if (*piSortFlags & SORT_UNIQUNIQ)
           CheckDlgButton(hwnd,105,BST_CHECKED);
@@ -6416,12 +6416,12 @@ INT_PTR CALLBACK EditSortDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam
           bEnableLogicalSort = TRUE;
         }
         else {
-          EnableWindow(GetDlgItem(hwnd,107),FALSE);
+          DialogEnableWindow(hwnd,107,FALSE);
           bEnableLogicalSort = FALSE;
         }
         if (SC_SEL_RECTANGLE != SendMessage(hwndEdit,SCI_GETSELECTIONMODE,0,0)) {
           *piSortFlags &= ~SORT_COLUMN;
-          EnableWindow(GetDlgItem(hwnd,108),FALSE);
+          DialogEnableWindow(hwnd,108,FALSE);
         }
         else {
           *piSortFlags |= SORT_COLUMN;
@@ -6459,21 +6459,21 @@ INT_PTR CALLBACK EditSortDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam
           break;
         case 100:
         case 101:
-          EnableWindow(GetDlgItem(hwnd,103),IsDlgButtonChecked(hwnd,105) != BST_CHECKED);
-          EnableWindow(GetDlgItem(hwnd,104),TRUE);
-          EnableWindow(GetDlgItem(hwnd,105),TRUE);
-          EnableWindow(GetDlgItem(hwnd,106),TRUE);
-          EnableWindow(GetDlgItem(hwnd,107),bEnableLogicalSort);
+          DialogEnableWindow(hwnd,103,IsDlgButtonChecked(hwnd,105) != BST_CHECKED);
+          DialogEnableWindow(hwnd,104,TRUE);
+          DialogEnableWindow(hwnd,105,TRUE);
+          DialogEnableWindow(hwnd,106,TRUE);
+          DialogEnableWindow(hwnd,107,bEnableLogicalSort);
           break;
         case 102:
-          EnableWindow(GetDlgItem(hwnd,103),FALSE);
-          EnableWindow(GetDlgItem(hwnd,104),FALSE);
-          EnableWindow(GetDlgItem(hwnd,105),FALSE);
-          EnableWindow(GetDlgItem(hwnd,106),FALSE);
-          EnableWindow(GetDlgItem(hwnd,107),FALSE);
+          DialogEnableWindow(hwnd,103,FALSE);
+          DialogEnableWindow(hwnd,104,FALSE);
+          DialogEnableWindow(hwnd,105,FALSE);
+          DialogEnableWindow(hwnd,106,FALSE);
+          DialogEnableWindow(hwnd,107,FALSE);
           break;
         case 104:
-          EnableWindow(GetDlgItem(hwnd,103),IsDlgButtonChecked(hwnd,104) != BST_CHECKED);
+          DialogEnableWindow(hwnd,103,IsDlgButtonChecked(hwnd,104) != BST_CHECKED);
           break;
       }
       return TRUE;

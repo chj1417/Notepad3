@@ -141,7 +141,7 @@ void MakeColorPickButton(HWND,int,HINSTANCE,COLORREF);
 void DeleteBitmapButton(HWND,int);
 
 
-#define StatusSetSimple(hwnd,b) SendMessage(hwnd,SB_SIMPLE,(WPARAM)b,0)
+#define StatusSetSimple(hwnd,b) SendMessage((hwnd),SB_SIMPLE,(WPARAM)(b),0)
 BOOL StatusSetText(HWND,UINT,LPCWSTR);
 BOOL StatusSetTextID(HWND,UINT,UINT);
 int  StatusCalcPaneWidth(HWND,LPCWSTR);
@@ -156,8 +156,16 @@ BOOL IsCmdEnabled(HWND, UINT);
 #define EnableCmd(hmenu,id,b) EnableMenuItem(hmenu,id,(b)?MF_BYCOMMAND|MF_ENABLED:MF_BYCOMMAND|MF_GRAYED)
 #define CheckCmd(hmenu,id,b)  CheckMenuItem(hmenu,id,(b)?MF_BYCOMMAND|MF_CHECKED:MF_BYCOMMAND|MF_UNCHECKED)
 
-#define DialogEnableWindow(hdlg, id, b) { HWND hctrl = GetDlgItem((hdlg),(id)); if (!(b)) { \
-  if (GetFocus() == hctrl) { SendMessage((hdlg), WM_NEXTDLGCTL, 0, FALSE); } }; EnableWindow(hctrl, (b)); }
+__inline BOOL DialogEnableWindow(HWND hdlg, int id, BOOL bEnable)
+{
+  HWND hctrl = GetDlgItem(hdlg, id);
+  if (!bEnable) { 
+    if (GetFocus() == hctrl)
+      SendMessage((hdlg), WM_NEXTDLGCTL, 0, FALSE); 
+  } 
+  return EnableWindow(hctrl, bEnable); 
+}
+
 #define GetString(id,pb,cb) LoadString(g_hInstance,id,pb,cb)
 
 #define StrEnd(pStart) (pStart + lstrlen(pStart))
