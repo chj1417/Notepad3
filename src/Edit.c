@@ -3280,7 +3280,7 @@ void EditStripTrailingBlanks(HWND hwnd,BOOL bIgnoreSelection)
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "", SCFIND_REGEXP, 0, 0, 0, 0, 0, 0, NULL };
+      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "",  (SCFIND_REGEXP | SCFIND_POSIX), 0, 0, 0, 0, 0, 0, NULL };
       efrTrim.hwnd = hwnd;
 
       EditReplaceAllInSelection(hwnd,&efrTrim,FALSE);
@@ -4353,13 +4353,14 @@ void __fastcall EditSetSearchFlags(HWND hwnd, LPEDITFINDREPLACE lpefr)
 
 // Wildcard search uses the regexp engine to perform a simple search with * ? as wildcards 
 // instead of more advanced and user-unfriendly regexp syntax
+// for speed, we only need POSIX syntax here
 void __fastcall EscapeWildcards(char* szFind2, LPCEDITFINDREPLACE lpefr)
 {
   char szWildcardEscaped[FNDRPL_BUFFER] = { '\0' };
   int iSource = 0;
   int iDest = 0;
 
-  lpefr->fuFlags |= SCFIND_REGEXP;
+  lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
 
   while (szFind2[iSource] != '\0')
   {
@@ -4775,7 +4776,9 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             lpefr->bWildcardSearch = FALSE;
           }
           else {
-            if (!(IsDlgButtonChecked(hwnd, IDC_WILDCARDSEARCH) == BST_CHECKED))
+            if (IsDlgButtonChecked(hwnd, IDC_WILDCARDSEARCH) == BST_CHECKED)
+              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+            else
               lpefr->fuFlags ^= (SCFIND_REGEXP | SCFIND_POSIX);
           }
           bFlagsChanged = TRUE;
@@ -4786,11 +4789,15 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           if (IsDlgButtonChecked(hwnd, IDC_WILDCARDSEARCH) == BST_CHECKED) {
             CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
             lpefr->bWildcardSearch = TRUE;
-            lpefr->fuFlags = (SCFIND_REGEXP | SCFIND_POSIX);
+            lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
           }
           else {
             lpefr->bWildcardSearch = FALSE;
-            if (!(IsDlgButtonChecked(hwnd, IDC_FINDREGEXP) == BST_CHECKED))
+            if (IsDlgButtonChecked(hwnd, IDC_FINDREGEXP) == BST_CHECKED) {
+              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+              //lpefr->fuFlags ^= SCFIND_POSIX;
+            }
+            else
               lpefr->fuFlags ^= (SCFIND_REGEXP | SCFIND_POSIX);
           }
           bFlagsChanged = TRUE;
