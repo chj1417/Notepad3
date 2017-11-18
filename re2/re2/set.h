@@ -45,7 +45,6 @@ class RE2::Set {
   int Add(const StringPiece& pattern, string* error);
 
   // Compiles the set in preparation for matching.
-
   // Returns false if the compiler runs out of memory.
   // Add() must not be called again after Compile().
   // Compile() must be called before Match().
@@ -55,6 +54,7 @@ class RE2::Set {
   // Fills v (if not NULL) with the indices of the matching regexps.
   // Callers must not expect v to be sorted.
   bool Match(const StringPiece& text, std::vector<int>* v) const;
+
   // As above, but populates error_info (if not NULL) when none of the regexps
   // in the set matched. This can inform callers when DFA execution fails, for
   // example, because they might wish to handle that case differently.
