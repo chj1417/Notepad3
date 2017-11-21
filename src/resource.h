@@ -116,6 +116,7 @@
 #define IDD_INFOBOX                     126
 #define IDD_INFOBOX2                    127
 #define IDD_INFOBOX3                    128
+#define IDC_FINDFUZZY                   129
 #define IDC_BACKSLASHHELP               151
 #define IDC_REGEXPHELP                  152
 #define IDC_WILDCARDHELP                153
@@ -150,6 +151,9 @@
 #define IDC_EDIT3                       410
 #define IDS_PASS_FAILURE                411
 #define IDS_NOPASS                      412
+#define IDC_FUZZYSLIDER                 413
+#define IDC_FUZZYVALUE                  414
+#define IDC_SLIDER1                     415
 #define IDS_APPTITLE                    10000
 #define IDS_APPTITLE_ELEVATED           10001
 #define IDS_APPTITLE_PASTEBOARD         10002
@@ -469,7 +473,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        600
 #define _APS_NEXT_COMMAND_VALUE         700
-#define _APS_NEXT_CONTROL_VALUE         801
+#define _APS_NEXT_CONTROL_VALUE         416
 #define _APS_NEXT_SYMED_VALUE           900
 #endif
 #endif

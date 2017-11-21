@@ -34,6 +34,7 @@ typedef struct _editfindreplace
   BOOL bReplaceClose;
   BOOL bNoFindWrap;
   BOOL bWildcardSearch;
+  BOOL bApproximateSearch;
   HWND hwnd;
   //HANDLE hMRUFind;
   //HANDLE hMRUReplace;
