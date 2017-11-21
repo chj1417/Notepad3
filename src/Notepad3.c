@@ -276,7 +276,7 @@ UINT      msgTaskbarCreated = 0;
 
 HMODULE   hModUxTheme = NULL;
 
-EDITFINDREPLACE efrData = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, NULL };
+EDITFINDREPLACE efrData = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, -1, NULL };
 UINT cpLastFind = 0;
 BOOL bReplaceInitialized = FALSE;
 
@@ -4712,7 +4712,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         struct tm sst;
 
         UINT cp;
-        EDITFINDREPLACE efrTS = { "", "", "", "", SCFIND_REGEXP, 0, 0, 0, 0, 0, 0, 0, NULL };
+        EDITFINDREPLACE efrTS = { "", "", "", "", SCFIND_REGEXP, 0, 0, 0, 0, 0, 0, -1, NULL };
         efrTS.hwnd = hwndEdit;
 
         IniGetString(L"Settings2",L"TimeStamp",L"\\$Date:[^\\$]+\\$ | $Date: %Y/%m/%d %H:%M:%S $",wchFind,COUNTOF(wchFind));

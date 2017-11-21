@@ -19,6 +19,12 @@
     <Filter Include="regex">
       <UniqueIdentifier>{7dd620ba-0b44-4340-8812-ebae2b6acbf3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="regex\TRE">
+      <UniqueIdentifier>{4b33e8a7-2fc3-44b5-ad20-a323dc3a9273}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="regex\TRE\lib">
+      <UniqueIdentifier>{231f8fe1-c9ce-43b0-8620-1d77c428ce1a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lexers\LexAHK.cxx">
@@ -261,6 +267,45 @@
     <ClCompile Include="..\regex\SciRegexSearch.cxx">
       <Filter>regex</Filter>
     </ClCompile>
+    <ClCompile Include="..\tre\lib\regcomp.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\regerror.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\regexec.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-ast.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-compile.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-filter.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-match-approx.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-match-backtrack.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-match-parallel.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-mem.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-parse.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\tre-stack.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tre\lib\xmalloc.c">
+      <Filter>regex\TRE\lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ILexer.h">
@@ -441,6 +486,45 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\regex\deelx64.h">
+      <Filter>regex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\regex.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-ast.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-compile.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-filter.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-internal.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-match-utils.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-mem.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-parse.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\tre-stack.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tre\lib\xmalloc.h">
+      <Filter>regex\TRE\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\regex\config.h">
+      <Filter>regex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\regex\tre-config.h">
       <Filter>regex</Filter>
     </ClInclude>
   </ItemGroup>

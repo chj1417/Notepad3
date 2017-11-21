@@ -50,8 +50,8 @@
 #define DEFAULT_SCROLL_WIDTH 4096    // 4K
 
 // find free bits in scintilla.h SCFIND_ defines
-// SCFIND_NP3_FUZZY_BIT must be same as used in Scintillas external search class
-#define SCFIND_NP3_FUZZY_BIT 0x2000
+// SCFIND_NP3_FUZZY_BIT must be same as used in Scintilla's external search class
+#define SCFIND_NP3_FUZZY_BIT SCFIND_APPROXIMATE
 #define SCFIND_NP3_REGEX (SCFIND_REGEXP | SCFIND_POSIX)
 #define SCFIND_NP3_FUZZY (SCFIND_REGEXP | SCFIND_POSIX | SCFIND_NP3_FUZZY_BIT)
 
@@ -132,7 +132,7 @@ extern LPMRULIST mruReplace;
 
 
 const int MIN_FUZZYSEARCH_VALUE = 0;
-const int MAX_FUZZYSEARCH_VALUE = 100;
+const int MAX_FUZZYSEARCH_VALUE = 0xFF;
 
 
 //=============================================================================
@@ -1598,7 +1598,7 @@ void EditEscapeCChars(HWND hwnd) {
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, NULL };
+      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, -1, NULL };
       efr.hwnd = hwnd;
 
       SendMessage(hwnd,SCI_BEGINUNDOACTION,0,0);
@@ -1633,7 +1633,7 @@ void EditUnescapeCChars(HWND hwnd) {
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, NULL };
+      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, -1, NULL };
       efr.hwnd = hwnd;
 
       SendMessage(hwnd,SCI_BEGINUNDOACTION,0,0);
@@ -3294,7 +3294,7 @@ void EditStripTrailingBlanks(HWND hwnd,BOOL bIgnoreSelection)
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "",  SCFIND_NP3_REGEX, 0, 0, 0, 0, 0, 0, 0, NULL };
+      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "",  SCFIND_NP3_REGEX, 0, 0, 0, 0, 0, 0, -1, NULL };
       efrTrim.hwnd = hwnd;
 
       EditReplaceAllInSelection(hwnd,&efrTrim,FALSE);
@@ -4362,10 +4362,7 @@ void __fastcall EditSetSearchFlags(HWND hwnd, LPEDITFINDREPLACE lpefr)
 
   if (IsDlgButtonChecked(hwnd, IDC_FINDFUZZY) == BST_CHECKED) {
     lpefr->iApproximateSearch = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
-    if (lpefr->iApproximateSearch > 0)
-      lpefr->fuFlags |= SCFIND_NP3_FUZZY;
-    else 
-      lpefr->fuFlags |= SCFIND_NP3_REGEX;
+    lpefr->fuFlags |= (SCFIND_NP3_FUZZY | (lpefr->iApproximateSearch << 8));
   }
 
   if (!(lpefr->fuFlags & SCFIND_REGEXP))
@@ -4663,7 +4660,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             CheckDlgButton(hwnd,IDC_FINDFUZZY,BST_UNCHECKED);
         }
 
-        if (lpefr->iApproximateSearch > 0) {
+        if (lpefr->iApproximateSearch >= 0) {
           CheckDlgButton(hwnd, IDC_FINDFUZZY, BST_CHECKED);
           CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
           CheckDlgButton(hwnd, IDC_WILDCARDSEARCH, BST_UNCHECKED);
@@ -4838,7 +4835,8 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
             lpefr->fuFlags |= SCFIND_NP3_REGEX;
             lpefr->bWildcardSearch = FALSE;
-            lpefr->iApproximateSearch = 0;
+            lpefr->iApproximateSearch = -1;
+            lpefr->fuFlags ^= (0xFF << 8);
           }
           else {
             if (IsDlgButtonChecked(hwnd, IDC_WILDCARDSEARCH) == BST_CHECKED) {
@@ -4880,7 +4878,8 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
             lpefr->fuFlags |= SCFIND_NP3_REGEX;
             lpefr->bWildcardSearch = TRUE;
-            lpefr->iApproximateSearch = 0;
+            lpefr->iApproximateSearch = -1;
+            lpefr->fuFlags ^= (0xFF << 8);
           }
           else {
             if (IsDlgButtonChecked(hwnd, IDC_FINDREGEXP) == BST_CHECKED)
@@ -4921,8 +4920,8 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
             CheckDlgButton(hwnd, IDC_WILDCARDSEARCH, BST_UNCHECKED); // Can not use wildcard search together with regexp
             lpefr->fuFlags ^= SCFIND_NP3_REGEX;
-            lpefr->fuFlags |= SCFIND_NP3_FUZZY;
-            lpefr->iApproximateSearch = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);;
+            lpefr->iApproximateSearch = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
+            lpefr->fuFlags |= (SCFIND_NP3_FUZZY | (lpefr->iApproximateSearch << 8));
             lpefr->bWildcardSearch = FALSE;
           }
           else {
@@ -4947,7 +4946,8 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, TRUE);
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, (lpefr->bTransformBS) ? BST_CHECKED : BST_UNCHECKED);
             }
-            lpefr->iApproximateSearch = 0;
+            lpefr->iApproximateSearch = -1;
+            lpefr->fuFlags ^= (0xFF << 8);
             PostMessage(GetDlgItem(hwnd, IDC_FUZZYSLIDER), WM_CHANGEUISTATE, MAKELONG(UIS_CLEAR, UISF_HIDEFOCUS), 0);
           }
           bFlagsChanged = TRUE;
@@ -4961,6 +4961,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i", iValue);
             SetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal);
             lpefr->iApproximateSearch = iValue;
+            lpefr->fuFlags |= (SCFIND_NP3_FUZZY | (lpefr->iApproximateSearch << 8));
           }
           break;
 
@@ -4982,6 +4983,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             }
             //SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 0, iValue); // slider is edit ctrl
             lpefr->iApproximateSearch = iValue;
+            lpefr->fuFlags |= (SCFIND_NP3_FUZZY | (lpefr->iApproximateSearch << 8));
             */
           }
           break;
