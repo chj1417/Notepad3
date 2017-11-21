@@ -47,12 +47,13 @@
 #include "Document.h"
 // ---------------------------------------------------------------
 #include "deelx64.h"   // DEELX - Regular Expression Engine (v1.3)
-#include "regex.h"     // TRE - Regular Expression Engine (v0.8)
+#include "tre.h"       // TRE - Regular Expression Engine (v0.8)
 // ---------------------------------------------------------------
 
 using namespace Scintilla;
 
 #define SCFIND_NP3_FUZZY_BIT SCFIND_APPROXIMATE
+const int APPROXIMAT_MAX_VAL = 100;
 
 #define SciPos(pos)    static_cast<Sci::Position>(pos)
 #define SciLn(line)    static_cast<Sci::Line>(line)
@@ -368,12 +369,12 @@ const char* DeelXRegExEngine::SubstituteByPosition(Document* doc, const char* te
 
     m_SubstBuffer.clear();
 
-    for (int j = 0; j < rawReplStrg.length(); j++) {
+    for (size_t j = 0; j < rawReplStrg.length(); j++) {
       if ((rawReplStrg[j] == '$') || (rawReplStrg[j] == '\\'))
       {
         if ((rawReplStrg[j + 1] >= '0') && (rawReplStrg[j + 1] <= '9'))
         {
-          unsigned int grpNum = rawReplStrg[j + 1] - '0';
+          deelx::index_t grpNum = rawReplStrg[j + 1] - '0';
 
           if (grpNum <= m_Match.MaxGroupNumber())
           {
@@ -496,20 +497,40 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
   }
 
   // --- adjust line start and end positions for match ---
-
-
+  
   int match = REG_NOMATCH;
   m_RangeDocBegin = minPos;
   m_RangeLength = (maxPos - minPos);
+
+  const int base = 1 + (int)m_FindRegExPattern.length();
+
+  const int cost_ins   = 1;  // The default cost of an inserted character, that is, an extra character in string.
+  const int cost_del   = 1;  // The default cost of a deleted character, that is, a character missing from string.
+  const int cost_subst = 1;  // The default cost of a substituted character.
+
+  // The maximum allowed cost of a match. 
+  // If this is set to zero, an exact matching is searched for, 
+  // and results equivalent to those returned by the regexec() functions are returned.
+  const int max_cost  = (int)((base * m_ApproximateVal) / APPROXIMAT_MAX_VAL);
+
+  const int max_ins   = base;   // Maximum allowed number of inserted characters.
+  const int max_del   = base;   // Maximum allowed number of deleted characters.
+  const int max_subst = base;   // Maximum allowed number of substituted characters.
+  const int max_err   = max_ins + max_del + max_subst;   // Maximum allowed number of errors (inserts + deletes + substitutes)
+
+  const regaparams_t approxParams = { cost_ins, cost_del, cost_subst, max_cost, max_ins, max_del, max_subst, max_err};
+
 
   if (findprevious)  // search previous 
   {
     // search for last occurrence in range
     Sci::Position rangeBegin = m_RangeDocBegin;
     Sci::Position rangLength = m_RangeLength;
+    regamatch_t approxMatch = { 1, &(m_Groups[0]), 0, 0, 0, 0 };
+
     do {
-      match = tre_regnexec(&m_CompiledRegExPattern, // don't care for sub groups in while loop
-        doc->RangePointer(rangeBegin, rangLength), (size_t)rangLength, 1, m_Groups,
+      match = tre_reganexec(&m_CompiledRegExPattern, // don't care for sub groups in while loop
+        doc->RangePointer(rangeBegin, rangLength), (size_t)rangLength, &approxMatch, approxParams,
         getDocContextMatchFlags(doc, rangeBegin, rangeBegin + rangLength));
 
       if (match == REG_OK) {
@@ -523,9 +544,12 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
     } while ((match == REG_OK) && (rangeBegin < maxPos));
   }
 
+  size_t nsubgrp = min(m_CompiledRegExPattern.re_nsub + 1, MAXGROUPS);
+  regamatch_t approxMatch = { nsubgrp, &(m_Groups[0]), 0, 0, 0, 0 };
+
   // --- find match in range and set region groups ---
-  match = tre_regnexec(&m_CompiledRegExPattern,
-    doc->RangePointer(m_RangeDocBegin, m_RangeLength), (size_t)m_RangeLength, MAXGROUPS, m_Groups,
+  match = tre_reganexec(&m_CompiledRegExPattern,
+    doc->RangePointer(m_RangeDocBegin, m_RangeLength), (size_t)m_RangeLength, &approxMatch, approxParams,
     getDocContextMatchFlags(doc, m_RangeDocBegin, m_RangeDocBegin + m_RangeLength));
 
 
@@ -552,7 +576,7 @@ const char* TREgExEngine::SubstituteByPosition(Document* doc, const char* text, 
 
     m_SubstBuffer.clear();
 
-    for (int j = 0; j < rawReplStrg.length(); j++) {
+    for (size_t j = 0; j < rawReplStrg.length(); j++) {
       if ((rawReplStrg[j] == '$') || (rawReplStrg[j] == '\\'))
       {
         if ((rawReplStrg[j + 1] >= '0') && (rawReplStrg[j + 1] <= '9'))

@@ -9,7 +9,7 @@
 
 /* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
  */
-#define HAVE_ALLOCA_H 1
+#undef HAVE_ALLOCA_H
 
 /* Define to 1 if you have the <libutf8.h> header file. */
 /* #undef HAVE_LIBUTF8_H */

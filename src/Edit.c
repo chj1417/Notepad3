@@ -132,7 +132,7 @@ extern LPMRULIST mruReplace;
 
 
 const int MIN_FUZZYSEARCH_VALUE = 0;
-const int MAX_FUZZYSEARCH_VALUE = 0xFF;
+const int MAX_FUZZYSEARCH_VALUE = 100; // MAX: 0xFF;
 
 
 //=============================================================================
@@ -4535,6 +4535,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
   static HBRUSH hBrushGreen;
   static HBRUSH hBrushBlue;
 
+  static UINT uMarkAllTimer;
   static BOOL bDoCheckAllOccurrences = TRUE;
   static char lastFind[FNDRPL_BUFFER] = { L'\0' };
   static int iSaveMarkOcc = -1;
@@ -4716,11 +4717,12 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
 
 
         SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETRANGE, 1, MAKELONG(MIN_FUZZYSEARCH_VALUE, MAX_FUZZYSEARCH_VALUE));
-        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 1, MIN_FUZZYSEARCH_VALUE);
-        int iValue = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
+        int iValue = (lpefr->iApproximateSearch >= 0) ? min(lpefr->iApproximateSearch, MAX_FUZZYSEARCH_VALUE) : 0;
+        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 1, iValue);
         WCHAR fuzzyVal[64];
-        StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i", iValue);
+        StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i %%", MAX_FUZZYSEARCH_VALUE - iValue);
         SetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal);
+
 
 
         HMENU hmenu = GetSystemMenu(hwnd, FALSE);
@@ -4740,7 +4742,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
 
         EditSetSearchFlags(hwnd, lpefr);
         bFlagsChanged = TRUE;
-        PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+        SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
       }
       return TRUE;
 
@@ -4755,14 +4757,25 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             SendMessage(hwndMain, WM_COMMAND, (WPARAM)MAKELONG(IDM_VIEW_MARKOCCURRENCES_ONOFF, 1), 0);
           }
         }
+        KillTimer(hwnd, IDT_TIMER_MRKALL);
       }
       return FALSE;
 
 
+    case WM_TIMER:
+      {
+        if (LOWORD(wParam) == IDT_TIMER_MRKALL)
+        {
+          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          return TRUE;
+        }
+      }
+      return FALSE;
+
     case WM_ACTIVATE:
       if (bDoCheckAllOccurrences) {
         bFlagsChanged = TRUE;
-        PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+        SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
       }
       else {
         DialogEnableWindow(hwnd, IDC_REPLACEINSEL, !(BOOL)SendMessage(hwndEdit, SCI_GETSELECTIONEMPTY, 0, 0));
@@ -4859,7 +4872,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             }
           }
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
         case IDC_WILDCARDSEARCH:
@@ -4904,7 +4917,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             lpefr->bWildcardSearch = FALSE;
           }
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
         case IDC_FINDFUZZY:
@@ -4951,17 +4964,18 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             PostMessage(GetDlgItem(hwnd, IDC_FUZZYSLIDER), WM_CHANGEUISTATE, MAKELONG(UIS_CLEAR, UISF_HIDEFOCUS), 0);
           }
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
         case IDC_FUZZYSLIDER:
           {
             WCHAR fuzzyVal[64];
             int iValue = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
-            StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i", iValue);
+            StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i %%", MAX_FUZZYSEARCH_VALUE - iValue);
             SetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal);
             lpefr->iApproximateSearch = iValue;
             lpefr->fuFlags |= (SCFIND_NP3_FUZZY | (lpefr->iApproximateSearch << 8));
+            PostMessage(GetDlgItem(hwnd, IDC_FUZZYSLIDER), WM_CHANGEUISTATE, MAKELONG(UIS_SET, UISF_HIDEFOCUS), 0);
           }
           break;
 
@@ -4986,6 +5000,8 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             lpefr->fuFlags |= (SCFIND_NP3_FUZZY | (lpefr->iApproximateSearch << 8));
             */
           }
+          bFlagsChanged = TRUE;
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 250, NULL);
           break;
 
         case IDC_FINDTRANSFORMBS:
@@ -4996,22 +5012,22 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             lpefr->bTransformBS = FALSE;
           }
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
         case IDC_FINDCASE:
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
         case IDC_FINDWORD:
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
         case IDC_FINDSTART:
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
 
@@ -5148,7 +5164,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             }
           }
           bFlagsChanged = TRUE;
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           break;
 
 
@@ -5166,7 +5182,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             SetDlgItemTextW(hwnd, IDC_FINDTEXT, wszRepl);
             SetDlgItemTextW(hwnd, IDC_REPLACETEXT, wszFind);
             bFlagsChanged = TRUE;
-            PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+            SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           }
           break;
 
@@ -5190,7 +5206,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
               iSaveMarkOcc = -1;
             }
             bFlagsChanged = TRUE;
-            PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+            SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
           }
           break;
 
@@ -5322,7 +5338,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           return hBrush;
         }
       }
-      return DefWindowProc(hwnd, umsg, wParam, lParam);
+      return FALSE;
 
     } // WM_COMMAND:
     break;
