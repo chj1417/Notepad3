@@ -22,9 +22,10 @@
 #if !defined(NTDDI_VERSION)
 #define NTDDI_VERSION 0x06010000  /*NTDDI_WIN7*/
 #endif
-#define VC_EXTRALEAN 1
 
+#define VC_EXTRALEAN 1
 #include <windows.h>
+
 #include <shlwapi.h>
 #include <commctrl.h>
 #include <commdlg.h>
@@ -47,6 +48,13 @@
 #endif
 
 #define DEFAULT_SCROLL_WIDTH 4096    // 4K
+
+// find free bits in scintilla.h SCFIND_ defines
+#define SCFIND_NP3_FUZZY_BIT 0x2000
+#define SCFIND_NP3_REGEX (SCFIND_REGEXP | SCFIND_POSIX)
+#define SCFIND_NP3_FUZZY (SCFIND_REGEXP | SCFIND_POSIX | SCFIND_NP3_FUZZY_BIT)
+
+
 
 extern HWND  hwndMain;
 extern HWND  hwndEdit;
@@ -85,6 +93,7 @@ extern int iMarkOccurrencesMaxCount;
 
 extern NP2ENCODING mEncoding[];
 
+
 #define DELIM_BUFFER 258
 char DelimChars[DELIM_BUFFER] = { '\0' };
 char DelimCharsAccel[DELIM_BUFFER] = { '\0' };
@@ -94,6 +103,7 @@ char PunctuationCharsDefault[DELIM_BUFFER] = { '\0' };
 char WordCharsAccelerated[DELIM_BUFFER] = { '\0' };
 char WhiteSpaceCharsAccelerated[DELIM_BUFFER] = { '\0' };
 char PunctuationCharsAccelerated[1] = { '\0' }; // empty!
+
 
 enum AlignMask {
   ALIGN_LEFT = 0,
@@ -116,9 +126,12 @@ enum SortOrderMask {
 };
 
 
-
 extern LPMRULIST mruFind;
 extern LPMRULIST mruReplace;
+
+
+const int MIN_FUZZYSEARCH_VALUE = 0;
+const int MAX_FUZZYSEARCH_VALUE = 100;
 
 
 //=============================================================================
@@ -3280,7 +3293,7 @@ void EditStripTrailingBlanks(HWND hwnd,BOOL bIgnoreSelection)
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "",  (SCFIND_REGEXP | SCFIND_POSIX), 0, 0, 0, 0, 0, 0, 0, NULL };
+      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "",  SCFIND_NP3_REGEX, 0, 0, 0, 0, 0, 0, 0, NULL };
       efrTrim.hwnd = hwnd;
 
       EditReplaceAllInSelection(hwnd,&efrTrim,FALSE);
@@ -4339,16 +4352,19 @@ void __fastcall EditSetSearchFlags(HWND hwnd, LPEDITFINDREPLACE lpefr)
     lpefr->fuFlags |= SCFIND_WORDSTART;
 
   if (IsDlgButtonChecked(hwnd, IDC_FINDREGEXP) == BST_CHECKED)
-    lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+    lpefr->fuFlags |= SCFIND_NP3_REGEX;
 
   if (IsDlgButtonChecked(hwnd, IDC_WILDCARDSEARCH) == BST_CHECKED) {
     lpefr->bWildcardSearch = TRUE;
-    lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+    lpefr->fuFlags |= SCFIND_NP3_REGEX;
   }
 
   if (IsDlgButtonChecked(hwnd, IDC_FINDFUZZY) == BST_CHECKED) {
-    lpefr->bApproximateSearch = TRUE;
-    lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+    lpefr->iApproximateSearch = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
+    if (lpefr->iApproximateSearch > 0)
+      lpefr->fuFlags |= SCFIND_NP3_FUZZY;
+    else 
+      lpefr->fuFlags |= SCFIND_NP3_REGEX;
   }
 
   if (!(lpefr->fuFlags & SCFIND_REGEXP))
@@ -4367,7 +4383,7 @@ void __fastcall EscapeWildcards(char* szFind2, LPCEDITFINDREPLACE lpefr)
   int iSource = 0;
   int iDest = 0;
 
-  lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+  lpefr->fuFlags |= SCFIND_NP3_REGEX;
 
   while (szFind2[iSource] != '\0')
   {
@@ -4646,7 +4662,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             CheckDlgButton(hwnd,IDC_FINDFUZZY,BST_UNCHECKED);
         }
 
-        if (lpefr->bApproximateSearch) {
+        if (lpefr->iApproximateSearch > 0) {
           CheckDlgButton(hwnd, IDC_FINDFUZZY, BST_CHECKED);
           CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
           CheckDlgButton(hwnd, IDC_WILDCARDSEARCH, BST_UNCHECKED);
@@ -4701,12 +4717,11 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         }
 
 
-        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETRANGE, 1, MAKELONG(0, 100));
-        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 1, 50);
-
-        int val = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
+        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETRANGE, 1, MAKELONG(MIN_FUZZYSEARCH_VALUE, MAX_FUZZYSEARCH_VALUE));
+        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 1, MIN_FUZZYSEARCH_VALUE);
+        int iValue = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
         WCHAR fuzzyVal[64];
-        StringCchPrintfW(fuzzyVal, COUNTOF(fuzzyVal), L"%i", val);
+        StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i", iValue);
         SetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal);
 
 
@@ -4817,24 +4832,29 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             CheckDlgButton(hwnd, IDC_FINDFUZZY, BST_UNCHECKED);
             DialogEnableWindow(hwnd, IDC_FUZZYSLIDER, FALSE);
             DialogEnableWindow(hwnd, IDC_FUZZYVALUE, FALSE);
+            PostMessage(GetDlgItem(hwnd, IDC_FUZZYSLIDER), WM_CHANGEUISTATE, MAKELONG(UIS_CLEAR, UISF_HIDEFOCUS), 0);
 
-            lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+            lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
+            lpefr->fuFlags |= SCFIND_NP3_REGEX;
             lpefr->bWildcardSearch = FALSE;
-            lpefr->bApproximateSearch = FALSE;
+            lpefr->iApproximateSearch = 0;
           }
           else {
             if (IsDlgButtonChecked(hwnd, IDC_WILDCARDSEARCH) == BST_CHECKED) {
-              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
+              lpefr->fuFlags |= SCFIND_NP3_REGEX;
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_CHECKED);
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, FALSE);
             }
             else if (IsDlgButtonChecked(hwnd, IDC_FINDFUZZY) == BST_CHECKED) {
-              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_REGEX;
+              lpefr->fuFlags |= SCFIND_NP3_FUZZY;
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_CHECKED);
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, FALSE);
             }
             else {
-              lpefr->fuFlags ^= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_REGEX;
+              lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, TRUE);
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, (lpefr->bTransformBS) ? BST_CHECKED : BST_UNCHECKED);
             }
@@ -4854,27 +4874,32 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             CheckDlgButton(hwnd, IDC_FINDFUZZY, BST_UNCHECKED);
             DialogEnableWindow(hwnd, IDC_FUZZYSLIDER, FALSE);
             DialogEnableWindow(hwnd, IDC_FUZZYVALUE, FALSE);
+            PostMessage(GetDlgItem(hwnd, IDC_FUZZYSLIDER), WM_CHANGEUISTATE, MAKELONG(UIS_CLEAR, UISF_HIDEFOCUS), 0);
 
-            lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+            lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
+            lpefr->fuFlags |= SCFIND_NP3_REGEX;
             lpefr->bWildcardSearch = TRUE;
-            lpefr->bApproximateSearch = FALSE;
+            lpefr->iApproximateSearch = 0;
           }
           else {
             if (IsDlgButtonChecked(hwnd, IDC_FINDREGEXP) == BST_CHECKED)
             {
-              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
+              lpefr->fuFlags |= SCFIND_NP3_REGEX;
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_CHECKED);
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, FALSE);
             }
             else if (IsDlgButtonChecked(hwnd, IDC_FINDFUZZY) == BST_CHECKED) {
-              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_REGEX;
+              lpefr->fuFlags |= SCFIND_NP3_FUZZY;
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_CHECKED);
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, FALSE);
             }
             else {
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, TRUE);
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, (lpefr->bTransformBS) ? BST_CHECKED : BST_UNCHECKED);
-              lpefr->fuFlags ^= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_REGEX;
+              lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
             }
             lpefr->bWildcardSearch = FALSE;
           }
@@ -4887,14 +4912,16 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           {
             DialogEnableWindow(hwnd, IDC_FUZZYSLIDER, TRUE);
             DialogEnableWindow(hwnd, IDC_FUZZYVALUE, TRUE);
+            PostMessage(GetDlgItem(hwnd, IDC_FUZZYSLIDER), WM_CHANGEUISTATE, MAKELONG(UIS_SET, UISF_HIDEFOCUS), 0);
 
             CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_CHECKED);
             DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, FALSE);
 
             CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
             CheckDlgButton(hwnd, IDC_WILDCARDSEARCH, BST_UNCHECKED); // Can not use wildcard search together with regexp
-            lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
-            lpefr->bApproximateSearch = TRUE;
+            lpefr->fuFlags ^= SCFIND_NP3_REGEX;
+            lpefr->fuFlags |= SCFIND_NP3_FUZZY;
+            lpefr->iApproximateSearch = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);;
             lpefr->bWildcardSearch = FALSE;
           }
           else {
@@ -4902,21 +4929,25 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             DialogEnableWindow(hwnd, IDC_FUZZYVALUE, FALSE);
 
             if (IsDlgButtonChecked(hwnd, IDC_WILDCARDSEARCH) == BST_CHECKED) {
-              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
+              lpefr->fuFlags |= SCFIND_NP3_REGEX;
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_CHECKED);
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, FALSE);
             }
             else if (IsDlgButtonChecked(hwnd, IDC_FINDREGEXP) == BST_CHECKED) {
-              lpefr->fuFlags |= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
+              lpefr->fuFlags |= SCFIND_NP3_REGEX;
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, BST_CHECKED);
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, FALSE);
             }
             else {
-              lpefr->fuFlags ^= (SCFIND_REGEXP | SCFIND_POSIX);
+              lpefr->fuFlags ^= SCFIND_NP3_FUZZY;
+              lpefr->fuFlags ^= SCFIND_NP3_REGEX;
               DialogEnableWindow(hwnd, IDC_FINDTRANSFORMBS, TRUE);
               CheckDlgButton(hwnd, IDC_FINDTRANSFORMBS, (lpefr->bTransformBS) ? BST_CHECKED : BST_UNCHECKED);
             }
-            lpefr->bApproximateSearch = FALSE;
+            lpefr->iApproximateSearch = 0;
+            PostMessage(GetDlgItem(hwnd, IDC_FUZZYSLIDER), WM_CHANGEUISTATE, MAKELONG(UIS_CLEAR, UISF_HIDEFOCUS), 0);
           }
           bFlagsChanged = TRUE;
           PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
@@ -4924,14 +4955,34 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
 
         case IDC_FUZZYSLIDER:
           {
-            int val = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
             WCHAR fuzzyVal[64];
-            StringCchPrintfW(fuzzyVal, COUNTOF(fuzzyVal), L"%i", val);
+            int iValue = (int)SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_GETPOS, 0, 0);
+            StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i", iValue);
             SetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal);
+            lpefr->iApproximateSearch = iValue;
           }
           break;
 
         case IDC_FUZZYVALUE:
+          {
+          /*
+            WCHAR fuzzyVal[64];
+            GetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal, COUNTOF(fuzzyVal));
+            int iValue = 0;
+            int itok = swscanf_s(fuzzyVal, L"%i", &iValue);
+            if (itok == 1) {
+              if (iValue < MIN_FUZZYSEARCH_VALUE)
+                iValue = MIN_FUZZYSEARCH_VALUE;
+              else if (iValue > MAX_FUZZYSEARCH_VALUE)
+                iValue = MAX_FUZZYSEARCH_VALUE;
+            }
+            else {
+              iValue = lpefr->iApproximateSearch;
+            }
+            //SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 0, iValue); // slider is edit ctrl
+            lpefr->iApproximateSearch = iValue;
+            */
+          }
           break;
 
         case IDC_FINDTRANSFORMBS:
