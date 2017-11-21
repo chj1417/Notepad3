@@ -50,6 +50,7 @@
 #define DEFAULT_SCROLL_WIDTH 4096    // 4K
 
 // find free bits in scintilla.h SCFIND_ defines
+// SCFIND_NP3_FUZZY_BIT must be same as used in Scintillas external search class
 #define SCFIND_NP3_FUZZY_BIT 0x2000
 #define SCFIND_NP3_REGEX (SCFIND_REGEXP | SCFIND_POSIX)
 #define SCFIND_NP3_FUZZY (SCFIND_REGEXP | SCFIND_POSIX | SCFIND_NP3_FUZZY_BIT)

@@ -1,6 +1,6 @@
 /**
- * @file  DeelxRegexSearch.cxx
- * @brief integrate DeelX regex searching for Scintilla library
+ * @file  SciRegexSearch.cxx
+ * @brief integrate DeelX and TRE regex searching for Scintilla library
  *              (Scintilla Lib is copyright 1998-2016 by Neil Hodgson <neilh@scintilla.org>)
  *
  *        uses DEELX - Regular Expression Engine (v1.3) (deelx.h) - http://www.regexlab.com/deelx/
@@ -12,7 +12,7 @@
  * @autor Rainer Kottenhoff (RaPeHoff)
  *
  * Install:
- *   - place files (deelx64.h, DeelxRegexSearch.cxx, deelx_en.chm)
+ *   - place files (deelx64.h, SciRegexSearch.cxx, deelx_en.chm)
  *       in a directory (deelx) within the scintilla project (.../scintilla/deelx/)
  *   - add source files to scintilla project (Scintilla.vcxproj in VS)
  *   - define compiler (preprocessor) macro for scintilla project named "SCI_OWNREGEX"
@@ -46,17 +46,21 @@
 #include "CharClassify.h"
 #include "Document.h"
 // ---------------------------------------------------------------
-//#include "deelx.h"   // DEELX - Regular Expression Engine (v1.2)
 #include "deelx64.h"   // DEELX - Regular Expression Engine (v1.3)
+//#include "tre.h"       // TRE - Regular Expression Engine (v0.8)
 // ---------------------------------------------------------------
 
 using namespace Scintilla;
+
+#define SCFIND_NP3_FUZZY_BIT 0x2000
 
 #define SciPos(pos)    static_cast<Sci::Position>(pos)
 #define SciLn(line)    static_cast<Sci::Line>(line)
 #define SciPosExt(pos) static_cast<Sci_Position>(pos)
 
 #define DeelXPos(pos)  static_cast<deelx::index_t>(pos)
+#define TrePos(pos)    static_cast<int>(pos)
+
 #define Cast2long(n)   static_cast<long>(n)
 
 // ---------------------------------------------------------------
@@ -65,11 +69,17 @@ const int MAX_GROUP_COUNT = 10;
 
 // ---------------------------------------------------------------
 
-class DeelxRegexSearch : public RegexSearchBase
+// sone forward declarations 
+static std::string& translateRegExpr(std::string& regExprStr, bool wholeWord, bool wordStart);
+static std::string& convertReplExpr(std::string& replStr);
+
+// ---------------------------------------------------------------
+
+class DeelXRegExEngine
 {
 public:
 
-  explicit DeelxRegexSearch(CharClassify* charClassTable)
+  explicit DeelXRegExEngine(CharClassify* charClassTable)
     : m_RegExprStrg()
     , m_CompileFlags(-1)
     , m_RegExpr()
@@ -79,17 +89,16 @@ public:
     , m_SubstBuffer()
   {}
 
-  virtual ~DeelxRegexSearch()
+  virtual ~DeelXRegExEngine()
   {
     ReleaseSubstitutionBuffer();
     m_RegExprStrg.clear();
   }
 
-  virtual long FindText(Document* doc, Sci::Position minPos, Sci::Position maxPos, const char* pattern,
-                        bool caseSensitive, bool word, bool wordStart, int flags, Sci::Position* length) override;
+  long FindText(Document* doc, Sci::Position minPos, Sci::Position maxPos, const char* pattern,
+                        bool caseSensitive, bool word, bool wordStart, int flags, Sci::Position* length);
 
-  virtual const char* SubstituteByPosition(Document* doc, const char* text, Sci::Position* length) override;
-
+  const char* SubstituteByPosition(Document* doc, const char* text, Sci::Position* length);
 
 private:
 
@@ -101,9 +110,6 @@ private:
     //}
   }
 
-  std::string& translateRegExpr(std::string& regExprStr, bool wholeWord, bool wordStart);
-  std::string& convertReplExpr(std::string& replStr);
-
 private:
 
   std::string m_RegExprStrg;
@@ -113,15 +119,8 @@ private:
   Sci::Position m_MatchPos;
   Sci::Position m_MatchLength;
   std::string m_SubstBuffer;
+
 };
-// ============================================================================
-
-
-RegexSearchBase *Scintilla::CreateRegexSearch(CharClassify *charClassTable)
-{
-  return new DeelxRegexSearch(charClassTable);
-}
-
 // ============================================================================
 
 
@@ -130,7 +129,7 @@ RegexSearchBase *Scintilla::CreateRegexSearch(CharClassify *charClassTable)
  * searches (just pass minPos > maxPos to do a backward search)
  * Has not been tested with backwards DBCS searches yet.
  */
-long DeelxRegexSearch::FindText(Document* doc, Sci::Position minPos, Sci::Position maxPos, const char *pattern,
+long DeelXRegExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position maxPos, const char *pattern,
                                 bool caseSensitive, bool word, bool wordStart, int searchFlags, Sci::Position *length)
 {
   const bool right2left = false; // always left-to-right match mode
@@ -237,15 +236,13 @@ long DeelxRegexSearch::FindText(Document* doc, Sci::Position minPos, Sci::Positi
 // ============================================================================
 
 
-
-
 #if 0
 
 #define _MAX(a,b) ((a)>(b)?(a):(b))
 #define _MIN(a,b) ((a)<(b)?(a):(b))
 
 
-const char* DeelxRegexSearch::SubstituteByPosition(Document* doc, const char* text, Sci::Position* length)
+const char* DeelXRegExEngine::SubstituteByPosition(Document* doc, const char* text, Sci::Position* length)
 {
   if (!m_Match.IsMatched() || (m_MatchPos < 0)) {
     *length = SciPos(0);
@@ -283,9 +280,7 @@ const char* DeelxRegexSearch::SubstituteByPosition(Document* doc, const char* te
 // ============================================================================
 #endif
 
-
-
-const char* DeelxRegexSearch::SubstituteByPosition(Document* doc, const char* text, Sci::Position* length)
+const char* DeelXRegExEngine::SubstituteByPosition(Document* doc, const char* text, Sci::Position* length)
 {
   if (m_Match.IsMatched() == 0) {
     *length = SciPos(-1);
@@ -332,6 +327,80 @@ const char* DeelxRegexSearch::SubstituteByPosition(Document* doc, const char* te
 // ============================================================================
 
 
+
+
+
+
+
+// ============================================================================
+
+// ============================================================================
+
+
+enum SearchEngine { DEELX_ENGINE, TRE_ENGINE };
+
+class SciRegexSearch : public RegexSearchBase
+{
+public:
+
+  explicit SciRegexSearch(CharClassify* charClassTable)
+    : m_DeelXEngine(charClassTable)
+    , m_LastSearchEngine(DEELX_ENGINE)
+  {}
+
+  virtual ~SciRegexSearch()
+  {
+  }
+
+  virtual long FindText(Document* doc, Sci::Position minPos, Sci::Position maxPos, const char* pattern,
+                        bool caseSensitive, bool word, bool wordStart, int flags, Sci::Position* length) override;
+
+  virtual const char* SubstituteByPosition(Document* doc, const char* text, Sci::Position* length) override;
+
+
+private:
+
+  DeelXRegExEngine m_DeelXEngine;
+  
+  SearchEngine m_LastSearchEngine;
+  
+};
+// ============================================================================
+
+
+RegexSearchBase *Scintilla::CreateRegexSearch(CharClassify *charClassTable)
+{
+  return new SciRegexSearch(charClassTable);
+}
+
+// ============================================================================
+
+
+long SciRegexSearch::FindText(Document* doc, Sci::Position minPos, Sci::Position maxPos, const char* pattern,
+                              bool caseSensitive, bool word, bool wordStart, int searchFlags, Sci::Position* length)
+{
+  if (searchFlags & SCFIND_NP3_FUZZY_BIT) 
+  {
+    m_LastSearchEngine = TRE_ENGINE;
+    return m_DeelXEngine.FindText(doc, minPos, maxPos, pattern, caseSensitive, word, wordStart, searchFlags, length);
+  }
+  else {
+    m_LastSearchEngine = DEELX_ENGINE;
+    //@@@ TRE engine here
+    return m_DeelXEngine.FindText(doc, minPos, maxPos, pattern, caseSensitive, word, wordStart, searchFlags, length);
+  }
+}
+
+const char* SciRegexSearch::SubstituteByPosition(Document* doc, const char* text, Sci::Position* length)
+{
+  if (m_LastSearchEngine == DEELX_ENGINE) 
+  {
+    return m_DeelXEngine.SubstituteByPosition(doc, text, length);
+  }
+  else {
+    return m_DeelXEngine.SubstituteByPosition(doc, text, length);
+  }
+}
 
 
 // ============================================================================
@@ -393,8 +462,7 @@ static void replaceAll(std::string& source,const std::string& from,const std::st
 // ----------------------------------------------------------------------------
 
 
-
-std::string& DeelxRegexSearch::translateRegExpr(std::string& regExprStr,bool wholeWord,bool wordStart)
+static std::string& translateRegExpr(std::string& regExprStr,bool wholeWord,bool wordStart)
 {
   std::string	tmpStr;
 
@@ -417,8 +485,7 @@ std::string& DeelxRegexSearch::translateRegExpr(std::string& regExprStr,bool who
 // ----------------------------------------------------------------------------
 
 
-
-std::string& DeelxRegexSearch::convertReplExpr(std::string& replStr)
+static std::string& convertReplExpr(std::string& replStr)
 {
   std::string	tmpStr;
   for (size_t i = 0; i < replStr.length(); ++i) {

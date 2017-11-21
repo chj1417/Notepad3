@@ -16,11 +16,8 @@
     <Filter Include="win32">
       <UniqueIdentifier>{afe7e35e-cd81-406c-a770-df29d2b3fc95}</UniqueIdentifier>
     </Filter>
-    <Filter Include="deelx">
-      <UniqueIdentifier>{67242aad-9133-44e7-9774-c36f5a9194bc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="deelx\doc">
-      <UniqueIdentifier>{4e167b73-0447-4a31-a66b-64c2d684516d}</UniqueIdentifier>
+    <Filter Include="regex">
+      <UniqueIdentifier>{7dd620ba-0b44-4340-8812-ebae2b6acbf3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -243,9 +240,6 @@
     <ClCompile Include="win32\ScintillaWin.cxx">
       <Filter>win32</Filter>
     </ClCompile>
-    <ClCompile Include="deelx\DeelxRegexSearch.cxx">
-      <Filter>deelx</Filter>
-    </ClCompile>
     <ClCompile Include="lexers\LexJSON.cxx">
       <Filter>lexers</Filter>
     </ClCompile>
@@ -263,6 +257,9 @@
     </ClCompile>
     <ClCompile Include="lexers\LexD.cxx">
       <Filter>lexers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\regex\SciRegexSearch.cxx">
+      <Filter>regex</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -425,9 +422,6 @@
     <ClInclude Include="win32\PlatWin.h">
       <Filter>win32</Filter>
     </ClInclude>
-    <ClInclude Include="deelx\deelx64.h">
-      <Filter>deelx</Filter>
-    </ClInclude>
     <ClInclude Include="include\Sci_Position.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -446,13 +440,8 @@
     <ClInclude Include="include\ILoader.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="deelx\deelx.h">
-      <Filter>deelx</Filter>
+    <ClInclude Include="..\regex\deelx64.h">
+      <Filter>regex</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="deelx\doc\deelx_en.chm">
-      <Filter>deelx\doc</Filter>
-    </None>
   </ItemGroup>
 </Project>

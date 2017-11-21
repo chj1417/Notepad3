@@ -193,7 +193,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="deelx\DeelxRegexSearch.cxx" />
+    <ClCompile Include="..\regex\SciRegexSearch.cxx" />
     <ClCompile Include="lexers\LexAHK.cxx" />
     <ClCompile Include="lexers\LexAsm.cxx" />
     <ClCompile Include="lexers\LexAU3.cxx" />
@@ -275,8 +275,7 @@
     <ClCompile Include="win32\ScintillaWin.cxx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="deelx\deelx.h" />
-    <ClInclude Include="deelx\deelx64.h" />
+    <ClInclude Include="..\regex\deelx64.h" />
     <ClInclude Include="include\ILexer.h" />
     <ClInclude Include="include\ILoader.h" />
     <ClInclude Include="include\Platform.h" />
@@ -336,9 +335,6 @@
     <ClInclude Include="src\ViewStyle.h" />
     <ClInclude Include="src\XPM.h" />
     <ClInclude Include="win32\PlatWin.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="deelx\doc\deelx_en.chm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
