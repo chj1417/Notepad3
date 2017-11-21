@@ -118,6 +118,7 @@
 #define IDD_INFOBOX3                    128
 #define IDC_FINDFUZZY                   129
 #define IDT_TIMER_MRKALL                130
+#define IDC_MARKALL_OCC                 131
 #define IDC_BACKSLASHHELP               151
 #define IDC_REGEXPHELP                  152
 #define IDC_WILDCARDHELP                153

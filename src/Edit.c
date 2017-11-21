@@ -4516,6 +4516,7 @@ RegExResult_t __fastcall EditFindHasMatch(HWND hwnd, LPCEDITFINDREPLACE lpefr, B
 }
 
 
+
 //=============================================================================
 //
 //  EditFindReplaceDlgProcW()
@@ -4535,7 +4536,6 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
   static HBRUSH hBrushGreen;
   static HBRUSH hBrushBlue;
 
-  static UINT uMarkAllTimer;
   static BOOL bDoCheckAllOccurrences = TRUE;
   static char lastFind[FNDRPL_BUFFER] = { L'\0' };
   static int iSaveMarkOcc = -1;
@@ -4742,7 +4742,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
 
         EditSetSearchFlags(hwnd, lpefr);
         bFlagsChanged = TRUE;
-        SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
+        SetTimer(hwnd, IDT_TIMER_MRKALL, 200, NULL);
       }
       return TRUE;
 
@@ -4766,7 +4766,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
       {
         if (LOWORD(wParam) == IDT_TIMER_MRKALL)
         {
-          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_FINDTEXT, 1), 0);
+          PostMessage(hwnd, WM_COMMAND, MAKELONG(IDC_MARKALL_OCC, 1), 0);
           return TRUE;
         }
       }
@@ -4811,26 +4811,32 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             SendDlgItemMessage(hwnd, LOWORD(wParam), CB_GETEDITSEL, 0, (LPARAM)&lSelEnd);
             SendDlgItemMessage(hwnd, LOWORD(wParam), CB_SETEDITSEL, 0, MAKELPARAM(lSelEnd, lSelEnd));
           }
-
-          if (bDoCheckAllOccurrences) {
-            EditSetSearchFlags(hwnd, lpefr);
-            if (bFlagsChanged || (StringCchCompareXA(lastFind, lpefr->szFind) != 0)) {
-              BeginWaitCursor();
-              StringCchCopyA(lastFind, COUNTOF(lastFind), lpefr->szFind);
-              RegExResult_t match = NO_MATCH;
-              match = EditFindHasMatch(hwndEdit, lpefr, (iSaveMarkOcc > 0), FALSE);
-              if (regexMatch != match) {
-                regexMatch = match;
-                InvalidateRect(GetDlgItem(hwnd, IDC_FINDTEXT), NULL, TRUE);
-              }
-              // we have to set Sci's regex instance to first find (have substitution in place)
-              EditFindHasMatch(hwndEdit, lpefr, FALSE, TRUE);
-              bFlagsChanged = FALSE;
-              EndWaitCursor();
-            }
-          }
+          bFlagsChanged = TRUE;
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 200, NULL);
         }
         break;
+
+        case IDC_MARKALL_OCC:
+          {
+            if (bDoCheckAllOccurrences) {
+              EditSetSearchFlags(hwnd, lpefr);
+              if (bFlagsChanged || (StringCchCompareXA(lastFind, lpefr->szFind) != 0)) {
+                BeginWaitCursor();
+                StringCchCopyA(lastFind, COUNTOF(lastFind), lpefr->szFind);
+                RegExResult_t match = NO_MATCH;
+                match = EditFindHasMatch(hwndEdit, lpefr, (iSaveMarkOcc > 0), FALSE);
+                if (regexMatch != match) {
+                  regexMatch = match;
+                  InvalidateRect(GetDlgItem(hwnd, IDC_FINDTEXT), NULL, TRUE);
+                }
+                // we have to set Sci's regex instance to first find (have substitution in place)
+                EditFindHasMatch(hwndEdit, lpefr, FALSE, TRUE);
+                bFlagsChanged = FALSE;
+                EndWaitCursor();
+              }
+            }
+          }
+          break;
 
         case IDC_FINDREGEXP:
           if (IsDlgButtonChecked(hwnd, IDC_FINDREGEXP) == BST_CHECKED)
