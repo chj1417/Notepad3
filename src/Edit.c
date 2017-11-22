@@ -4437,17 +4437,12 @@ int __fastcall EditGetFindStrg(HWND hwnd, LPCEDITFINDREPLACE lpefr, LPSTR szFind
   if (lpefr->bTransformBS || bIsRegEx)
     TransformBackslashes(szFind, bIsRegEx, Encoding_SciGetCodePage(hwnd),NULL);
 
-  int slen = StringCchLenA(szFind, FNDRPL_BUFFER);
-
-  if (slen == 0) {
-    InfoBox(0, L"MsgNotFound", IDS_NOTFOUND);
-  }
-  else {
+  if (StringCchLenA(szFind, FNDRPL_BUFFER) > 0) {
     if (lpefr->bWildcardSearch)
       EscapeWildcards(szFind, lpefr);
-
   }
-  return slen;
+  
+  return StringCchLenA(szFind, FNDRPL_BUFFER);
 }
 
 

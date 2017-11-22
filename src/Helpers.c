@@ -2461,7 +2461,7 @@ void TransformBackslashes(char* pszInput, BOOL bRegEx, UINT cpEdit, int* iReplac
       replTarget = CheckRegExReplTarget(pszInput);
   }
 
-  if (SCI_REPLACETARGET == replTarget)
+  if ((SCI_REPLACETARGET == replTarget) && !bRegEx)
     UnSlash(pszInput, cpEdit);
 
   if (iReplaceMsg)
