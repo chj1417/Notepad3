@@ -147,7 +147,7 @@ public:
 
   virtual ~TREgExEngine()
   {
-    ClearPattern();
+    ClearInstance();
   }
 
   long FindText(Document* doc, Sci::Position minPos, Sci::Position maxPos, const char* pattern,
@@ -158,7 +158,7 @@ public:
 
 private:
 
-  __inline void ClearPattern()
+  __inline void ClearInstance()
   {
     m_FindRegExPattern.clear();
     m_ApproximateVal = 0;
@@ -178,7 +178,7 @@ private:
   }
 
 
-  int getDocContextMatchFlags(Document* doc, int minPos, int maxPos);
+  int getDocContextMatchFlags(Document* doc, Sci::Position rangeBegin, Sci::Position rangeEnd);
 
   void adjustToEOLMode(Document* doc, int& matchResult);
 
@@ -428,7 +428,7 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
   const bool extended = true;    // ignore spaces and use '#' as line-comment)
 
   // retrieve approximate value from flags
-  m_ApproximateVal = (flags & (0xFF << 8)) >> 8;
+  int iApproxVal = (flags & (0xFF << 8)) >> 8;
 
   // Range endpoints should not be inside DBCS characters, but just in case, move them.
   minPos = doc->MovePositionOutsideChar(minPos, 1, false);
@@ -436,7 +436,7 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
   const bool findprevious = (minPos > maxPos);
 
   if (findprevious) {
-    int tmp = minPos;  minPos = maxPos;  maxPos = tmp;
+    Sci::Position tmp = minPos;  minPos = maxPos;  maxPos = tmp;
   }
 
   int compileFlags = REG_BASIC;
@@ -451,7 +451,7 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
 
   if (bReCompile)
   {
-    ClearPattern();
+    ClearInstance();
     m_CompileFlags = compileFlags;
     m_FindRegExPattern = transPattern;
     try {
@@ -501,22 +501,24 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
   int match = REG_NOMATCH;
   m_RangeDocBegin = minPos;
   m_RangeLength = (maxPos - minPos);
-
-  const int base = 1 + (int)m_FindRegExPattern.length();
+  m_ApproximateVal = iApproxVal;
 
   const int cost_ins   = 1;  // The default cost of an inserted character, that is, an extra character in string.
   const int cost_del   = 1;  // The default cost of a deleted character, that is, a character missing from string.
   const int cost_subst = 1;  // The default cost of a substituted character.
+  const int max_op = max(cost_ins, max(cost_del, cost_subst));
+
+  const int base = 1 + (int)m_FindRegExPattern.length();
 
   // The maximum allowed cost of a match. 
   // If this is set to zero, an exact matching is searched for, 
   // and results equivalent to those returned by the regexec() functions are returned.
-  const int max_cost  = (int)((base * m_ApproximateVal) / APPROXIMAT_MAX_VAL);
+  const int max_cost  = (int)((base * max_op * m_ApproximateVal + (APPROXIMAT_MAX_VAL>>1)) / APPROXIMAT_MAX_VAL);
 
   const int max_ins   = base;   // Maximum allowed number of inserted characters.
   const int max_del   = base;   // Maximum allowed number of deleted characters.
   const int max_subst = base;   // Maximum allowed number of substituted characters.
-  const int max_err   = max_ins + max_del + max_subst;   // Maximum allowed number of errors (inserts + deletes + substitutes)
+  const int max_err   = base;   // Maximum allowed number of errors (inserts + deletes + substitutes)
 
   const regaparams_t approxParams = { cost_ins, cost_del, cost_subst, max_cost, max_ins, max_del, max_subst, max_err};
 
@@ -525,7 +527,7 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
   {
     // search for last occurrence in range
     Sci::Position rangeBegin = m_RangeDocBegin;
-    Sci::Position rangLength = m_RangeLength;
+    Sci::Position rangLength = (maxPos - m_RangeDocBegin);
     regamatch_t approxMatch = { 1, &(m_Groups[0]), 0, 0, 0, 0 };
 
     do {
@@ -536,10 +538,10 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
       if (match == REG_OK) {
         // save Range
         m_RangeDocBegin = rangeBegin;
-        m_RangeLength = rangLength;
+        m_RangeLength = (maxPos - rangeBegin);
         // prepare next match
-        rangeBegin += (m_Groups[0].rm_so + 1);
-        rangLength = maxPos - rangeBegin;
+        rangeBegin += ((m_Groups[0].rm_eo - m_Groups[0].rm_so) > 0) ? (m_Groups[0].rm_eo) : 1;
+        rangLength = (maxPos - rangeBegin);
       }
     } while ((match == REG_OK) && (rangeBegin < maxPos));
   }
@@ -620,6 +622,7 @@ const char* TREgExEngine::SubstituteByPosition(Document* doc, const char* text, 
 // --- correct EOL ($) matches:  TRE's  $  matches only empty string immediately before '\n'  ---
 // ----------------------------------------------------------------------------------------------
 
+
 void TREgExEngine::adjustToEOLMode(Document* doc, int& matchResult)
 {
   if (matchResult == REG_OK) {
@@ -662,20 +665,20 @@ void TREgExEngine::adjustToEOLMode(Document* doc, int& matchResult)
 
 
 
-int TREgExEngine::getDocContextMatchFlags(Document* doc, Sci::Position minPos, Sci::Position maxPos)
+int TREgExEngine::getDocContextMatchFlags(Document* doc, Sci::Position rangeBegin, Sci::Position rangeEnd)
 {
   //Sci::Line linesTotal = doc->LinesTotal();
   Sci::Position fileLastPos = SciPos(doc->Length());
 
-  Sci::Position lineOfMinPos = SciPos(doc->LineFromPosition(SciPosExt(minPos)));
-  Sci::Position lineOfMaxPos = SciPos(doc->LineFromPosition(SciPosExt(maxPos)));
+  Sci::Position lineOfMinPos = SciPos(doc->LineFromPosition(SciPosExt(rangeBegin)));
+  Sci::Position lineOfMaxPos = SciPos(doc->LineFromPosition(SciPosExt(rangeEnd)));
 
   Sci::Position lineStartOfMinPos = SciPos(doc->LineStart(lineOfMinPos));
   Sci::Position lineEndOfMaxPos = SciPos(doc->LineEnd(lineOfMaxPos));
 
   int matchFlags = 0;
-  matchFlags |= (lineStartOfMinPos == minPos) ? 0 : REG_NOTBOL;
-  matchFlags |= (lineEndOfMaxPos == maxPos) ? 0 : REG_NOTEOL;
+  matchFlags |= (lineStartOfMinPos == rangeBegin) ? 0 : REG_NOTBOL;
+  matchFlags |= (lineEndOfMaxPos == rangeEnd) ? 0 : REG_NOTEOL;
 
   return matchFlags;
 }

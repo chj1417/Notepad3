@@ -4462,7 +4462,8 @@ int __fastcall EditFindInTarget(HWND hwnd, LPCSTR szFind, int length, int flags,
   SendMessage(hwnd, SCI_SETTARGETRANGE, _start, _end);
   int iPos = (int)SendMessage(hwnd, SCI_SEARCHINTARGET, length, (LPARAM)szFind);
   //  handle next in case of zero-length-matches (regex) !
-  if ((iPos == _start) && bForceNext) {
+  int nend = (int)SendMessage(hwnd, SCI_GETTARGETEND, 0, 0);
+  if ((iPos == _start) && (_start == nend) && bForceNext) {
     int newStart = (int)(bFindPrev ? SendMessage(hwnd, SCI_POSITIONBEFORE, _start, 0) :
                                      SendMessage(hwnd, SCI_POSITIONAFTER,  _start, 0));
     if (newStart != _start) {
@@ -4981,26 +4982,6 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           break;
 
         case IDC_FUZZYVALUE:
-          {
-          /*
-            WCHAR fuzzyVal[64];
-            GetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal, COUNTOF(fuzzyVal));
-            int iValue = 0;
-            int itok = swscanf_s(fuzzyVal, L"%i", &iValue);
-            if (itok == 1) {
-              if (iValue < MIN_FUZZYSEARCH_VALUE)
-                iValue = MIN_FUZZYSEARCH_VALUE;
-              else if (iValue > MAX_FUZZYSEARCH_VALUE)
-                iValue = MAX_FUZZYSEARCH_VALUE;
-            }
-            else {
-              iValue = lpefr->iApproximateSearch;
-            }
-            //SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 0, iValue); // slider is edit ctrl
-            lpefr->iApproximateSearch = iValue;
-            lpefr->fuFlags |= (SCFIND_NP3_FUZZY | (lpefr->iApproximateSearch << 8));
-            */
-          }
           bFlagsChanged = TRUE;
           SetTimer(hwnd, IDT_TIMER_MRKALL, 250, NULL);
           break;
@@ -5339,7 +5320,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           return hBrush;
         }
       }
-      return FALSE;
+      return DefWindowProc(hwnd, umsg, wParam, lParam);
 
     } // WM_COMMAND:
     break;
