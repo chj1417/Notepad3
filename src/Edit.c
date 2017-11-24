@@ -78,6 +78,7 @@ extern int iDefaultEOLMode;
 extern int iLineEndings[3];
 extern BOOL bFixLineEndings;
 extern BOOL bAutoStripBlanks;
+extern BOOL bSaveSettings;
 
 // Default Codepage and Character Set
 extern int iDefaultEncoding;
@@ -4466,7 +4467,7 @@ int __fastcall EditFindInTarget(HWND hwnd, LPCSTR szFind, int length, int flags,
     int nend = (int)SendMessage(hwnd, SCI_GETTARGETEND, 0, 0);
     if ((_start == nend) && bForceNext)
     {
-      int newStart = (int)(bFindPrev ?
+      int newStart = (int)(bFindPrev ? 
         SendMessage(hwnd, SCI_POSITIONBEFORE, _start, 0) :
         SendMessage(hwnd, SCI_POSITIONAFTER, _start, 0));
       if (newStart != _start) {
@@ -4714,16 +4715,6 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           CopyMemory(lpefr,&efrSave,sizeof(EDITFINDREPLACE));
         }
 
-
-        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETRANGE, 1, MAKELONG(MIN_FUZZYSEARCH_VALUE, MAX_FUZZYSEARCH_VALUE));
-        int iValue = (lpefr->iApproximateSearch >= 0) ? min(lpefr->iApproximateSearch, MAX_FUZZYSEARCH_VALUE) : 0;
-        SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, 1, iValue);
-        WCHAR fuzzyVal[64];
-        StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i %%", MAX_FUZZYSEARCH_VALUE - iValue);
-        SetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal);
-
-
-
         HMENU hmenu = GetSystemMenu(hwnd, FALSE);
         GetString(IDS_CHECK_OCC, tch2, COUNTOF(tch2));
         InsertMenu(hmenu, 0, MF_BYPOSITION | MF_STRING | MF_ENABLED, IDS_CHECK_OCC, tch2);
@@ -4750,6 +4741,9 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         DeleteObject(hBrushRed);
         DeleteObject(hBrushGreen);
         DeleteObject(hBrushBlue);
+        if (bSaveSettings)
+          IniSetBool(L"Settings2", L"FindReplaceCheckAllOccurrences", bDoCheckAllOccurrences);
+
         if (iSaveMarkOcc >= 0) {
           EnableCmd(GetMenu(hwndMain), IDM_VIEW_MARKOCCURRENCES_ONOFF, TRUE);
           if (iSaveMarkOcc != 0) {
@@ -5174,7 +5168,6 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         case IDC_CHECK_OCC:
           {
             bDoCheckAllOccurrences = !bDoCheckAllOccurrences;
-            IniSetBool(L"Settings2", L"FindReplaceCheckAllOccurrences", bDoCheckAllOccurrences);
             CheckCmd(GetSystemMenu(hwnd, FALSE), IDS_CHECK_OCC, bDoCheckAllOccurrences);
             if (bDoCheckAllOccurrences) {  // switched ON
               iSaveMarkOcc = iMarkOccurrences;
