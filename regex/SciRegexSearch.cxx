@@ -507,7 +507,7 @@ long TREgExEngine::FindText(Document* doc, Sci::Position minPos, Sci::Position m
   const int max_del   = max_cost;   // Maximum allowed number of deleted characters.
   const int max_subst = max_cost;   // Maximum allowed number of substituted characters.
   const int max_err   = max_cost;   // Maximum allowed number of errors (inserts + deletes + substitutes)
-
+  
   const regaparams_t approxParams = { cost_ins, cost_del, cost_subst, max_cost, max_ins, max_del, max_subst, max_err};
 
 
