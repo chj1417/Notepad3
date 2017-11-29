@@ -4663,12 +4663,18 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           CheckDlgButton(hwnd, IDC_FINDFUZZY, BST_CHECKED);
           CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
           CheckDlgButton(hwnd, IDC_WILDCARDSEARCH, BST_UNCHECKED);
-          DialogEnableWindow(hwnd, IDC_FUZZYSLIDER, TRUE);
+          WCHAR fuzzyVal[64];
+          StringCchPrintf(fuzzyVal, COUNTOF(fuzzyVal), L"%i %%", MAX_FUZZYSEARCH_VALUE - lpefr->iApproximateSearch);
+          SetDlgItemText(hwnd, IDC_FUZZYVALUE, fuzzyVal);
           DialogEnableWindow(hwnd, IDC_FUZZYVALUE, TRUE);
+          SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, TRUE, lpefr->iApproximateSearch);
+          DialogEnableWindow(hwnd, IDC_FUZZYSLIDER, TRUE);
         }
         else {
-          DialogEnableWindow(hwnd, IDC_FUZZYSLIDER, FALSE);
+          SetDlgItemText(hwnd, IDC_FUZZYVALUE, L"100 %");
           DialogEnableWindow(hwnd, IDC_FUZZYVALUE, FALSE);
+          SendDlgItemMessage(hwnd, IDC_FUZZYSLIDER, TBM_SETPOS, FALSE, 0);
+          DialogEnableWindow(hwnd, IDC_FUZZYSLIDER, FALSE);
         }
 
         if (lpefr->fuFlags & SCFIND_REGEXP) {
