@@ -78,7 +78,6 @@ extern int iDefaultEOLMode;
 extern int iLineEndings[3];
 extern BOOL bFixLineEndings;
 extern BOOL bAutoStripBlanks;
-extern BOOL bSaveSettings;
 
 // Default Codepage and Character Set
 extern int iDefaultEncoding;
@@ -1597,7 +1596,7 @@ void EditEscapeCChars(HWND hwnd) {
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, -1, NULL };
+      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, -1, NULL };
       efr.hwnd = hwnd;
 
       SendMessage(hwnd,SCI_BEGINUNDOACTION,0,0);
@@ -1632,7 +1631,7 @@ void EditUnescapeCChars(HWND hwnd) {
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, -1, NULL };
+      EDITFINDREPLACE efr = { "", "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, -1, NULL };
       efr.hwnd = hwnd;
 
       SendMessage(hwnd,SCI_BEGINUNDOACTION,0,0);
@@ -3293,7 +3292,7 @@ void EditStripTrailingBlanks(HWND hwnd,BOOL bIgnoreSelection)
   {
     if (SC_SEL_RECTANGLE != SendMessage(hwnd,SCI_GETSELECTIONMODE,0,0))
     {
-      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "",  SCFIND_NP3_REGEX, 0, 0, 0, 0, 0, 0, -1, NULL };
+      EDITFINDREPLACE efrTrim = { "[ \t]+$", "", "", "",  SCFIND_NP3_REGEX, 0, 0, 0, 0, 0, 0, 0, -1, NULL };
       efrTrim.hwnd = hwnd;
 
       EditReplaceAllInSelection(hwnd,&efrTrim,FALSE);
@@ -4367,6 +4366,8 @@ void __fastcall EditSetSearchFlags(HWND hwnd, LPEDITFINDREPLACE lpefr)
   if (!(lpefr->fuFlags & SCFIND_REGEXP))
     lpefr->bTransformBS = (IsDlgButtonChecked(hwnd, IDC_FINDTRANSFORMBS) == BST_CHECKED) ? TRUE : FALSE;
 
+  lpefr->bMarkOccurences = (IsDlgButtonChecked(hwnd, IDC_ALL_OCCURRENCES) == BST_CHECKED) ? TRUE : FALSE;
+
   lpefr->bNoFindWrap = (IsDlgButtonChecked(hwnd, IDC_NOWRAP) == BST_CHECKED) ? TRUE : FALSE;
 }
 
@@ -4534,7 +4535,6 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
   static HBRUSH hBrushGreen;
   static HBRUSH hBrushBlue;
 
-  static BOOL bDoCheckAllOccurrences = TRUE;
   static char lastFind[FNDRPL_BUFFER] = { L'\0' };
   static int iSaveMarkOcc = -1;
 
@@ -4544,10 +4544,10 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
       {
         static BOOL bFirstTime = TRUE;
 
-        if (bFirstTime) {
-          bDoCheckAllOccurrences = IniGetBool(L"Settings2", L"FindReplaceCheckAllOccurrences", TRUE);
-        }
-        if (bDoCheckAllOccurrences) {
+        SetWindowLongPtr(hwnd, DWLP_USER, (LONG_PTR)lParam);
+        lpefr = (LPEDITFINDREPLACE)lParam;
+
+        if (lpefr->bMarkOccurences) {
           iSaveMarkOcc = iMarkOccurrences;
           EnableCmd(GetMenu(hwndMain), IDM_VIEW_MARKOCCURRENCES_ONOFF, FALSE);
           iMarkOccurrences = 0;
@@ -4557,9 +4557,6 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           iSaveMarkOcc = -1;
           CheckDlgButton(hwnd, IDC_ALL_OCCURRENCES, BST_UNCHECKED);
         }
-
-        SetWindowLongPtr(hwnd,DWLP_USER,(LONG_PTR)lParam);
-        lpefr = (LPEDITFINDREPLACE)lParam;
 
         // Get the current code page for Unicode conversion
         UINT uCPEdit = Encoding_SciGetCodePage(hwndEdit);
@@ -4661,6 +4658,9 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             CheckDlgButton(hwnd,IDC_FINDFUZZY,BST_UNCHECKED);
         }
 
+        if (lpefr->bMarkOccurences)
+          CheckDlgButton(hwnd, IDC_ALL_OCCURRENCES, BST_CHECKED);
+
         if (lpefr->iApproximateSearch >= 0) {
           CheckDlgButton(hwnd, IDC_FINDFUZZY, BST_CHECKED);
           CheckDlgButton(hwnd, IDC_FINDREGEXP, BST_UNCHECKED);
@@ -4743,8 +4743,6 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         DeleteObject(hBrushRed);
         DeleteObject(hBrushGreen);
         DeleteObject(hBrushBlue);
-        if (bSaveSettings)
-          IniSetBool(L"Settings2", L"FindReplaceCheckAllOccurrences", bDoCheckAllOccurrences);
 
         if (iSaveMarkOcc >= 0) {
           EnableCmd(GetMenu(hwndMain), IDM_VIEW_MARKOCCURRENCES_ONOFF, TRUE);
@@ -4769,12 +4767,15 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
 
 
     case WM_ACTIVATE:
-      if (bDoCheckAllOccurrences) {
-        bFlagsChanged = TRUE;
-        SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
-      }
-      else {
-        DialogEnableWindow(hwnd, IDC_REPLACEINSEL, !(BOOL)SendMessage(hwndEdit, SCI_GETSELECTIONEMPTY, 0, 0));
+      {
+        lpefr = (LPEDITFINDREPLACE)GetWindowLongPtr(hwnd, DWLP_USER);
+        if (lpefr->bMarkOccurences) {
+          bFlagsChanged = TRUE;
+          SetTimer(hwnd, IDT_TIMER_MRKALL, 50, NULL);
+        }
+        else {
+          DialogEnableWindow(hwnd, IDC_REPLACEINSEL, !(BOOL)SendMessage(hwndEdit, SCI_GETSELECTIONEMPTY, 0, 0));
+        }
       }
       return FALSE;
 
@@ -4818,13 +4819,13 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         {
           if (IsDlgButtonChecked(hwnd, IDC_ALL_OCCURRENCES) == BST_CHECKED) 
           {
-            bDoCheckAllOccurrences = TRUE;
+            lpefr->bMarkOccurences = TRUE;
             iSaveMarkOcc = iMarkOccurrences;
             EnableCmd(GetMenu(hwndMain), IDM_VIEW_MARKOCCURRENCES_ONOFF, FALSE);
             iMarkOccurrences = 0;
           }
           else {                         // switched OFF
-            bDoCheckAllOccurrences = FALSE;
+            lpefr->bMarkOccurences = FALSE;
             if (iSaveMarkOcc >= 0) {
               EnableCmd(GetMenu(hwndMain), IDM_VIEW_MARKOCCURRENCES_ONOFF, TRUE);
               if (iSaveMarkOcc != 0) {
@@ -4838,11 +4839,11 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         }
         break;
 
-
+      // called on timer trigger
       case IDC_MARKALL_OCC:
         {
-          if (bDoCheckAllOccurrences) {
-            EditSetSearchFlags(hwnd, lpefr);
+          EditSetSearchFlags(hwnd, lpefr);
+          if (lpefr->bMarkOccurences) {
             if (bFlagsChanged || (StringCchCompareXA(lastFind, lpefr->szFind) != 0)) {
               BeginWaitCursor();
               StringCchCopyA(lastFind, COUNTOF(lastFind), lpefr->szFind);
@@ -5295,7 +5296,8 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
     case WM_CTLCOLOREDIT:
     case WM_CTLCOLORLISTBOX:
       {
-        if (bDoCheckAllOccurrences) 
+        lpefr = (LPEDITFINDREPLACE)GetWindowLongPtr(hwnd, DWLP_USER);
+        if (lpefr->bMarkOccurences)
         {
           HWND hCheck = (HWND)lParam;
           HDC hDC = (HDC)wParam;
