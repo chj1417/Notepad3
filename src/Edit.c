@@ -4833,6 +4833,7 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
               }
             }
             iSaveMarkOcc = -1;
+            InvalidateRect(GetDlgItem(hwnd, IDC_FINDTEXT), NULL, TRUE);
           }
           bFlagsChanged = TRUE;
           SetTimer(hwnd, IDT_TIMER_MRKALL, 100, NULL);
@@ -4855,11 +4856,10 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
               // we have to set Sci's regex instance to first find (have substitution in place)
               EditFindHasMatch(hwndEdit, lpefr, FALSE, TRUE);
               bFlagsChanged = FALSE;
+              InvalidateRect(GetDlgItem(hwnd, IDC_FINDTEXT), NULL, TRUE);
               EndWaitCursor();
             }
           }
-          InvalidateRect(GetDlgItem(hwnd, IDC_FINDTEXT), NULL, TRUE);
-          UpdateWindow(GetDlgItem(hwnd, IDC_FINDTEXT));
         }
         break;
 
