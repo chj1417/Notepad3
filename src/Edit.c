@@ -87,6 +87,7 @@ extern BOOL bLoadNFOasOEM;
 
 extern BOOL bAccelWordNavigation;
 extern BOOL bDenyVirtualSpaceAccess;
+extern BOOL bHyperlinkHotspot;
 
 extern int iMarkOccurrences;
 extern int iMarkOccurrencesCount;
@@ -5931,6 +5932,8 @@ void EditCompleteWord(HWND hwnd, BOOL autoInsert) {
 //
 void EditUpdateUrlHotspots(HWND hwnd, int startPos, int endPos)
 {
+  if (!bHyperlinkHotspot)  return;
+
   const char* pszUrlRegEx = "\\b(?:(?:https?|ftp|file)://|www\\.|ftp\\.)"
                             "(?:\\([-A-Z0-9+&@#/%=~_|$?!:,.]*\\)|[-A-Z0-9+&@#/%=~_|$?!:,.])*"
                             "(?:\\([-A-Z0-9+&@#/%=~_|$?!:,.]*\\)|[A-Z0-9+&@#/%=~_|$])";
