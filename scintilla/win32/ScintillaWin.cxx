@@ -3160,23 +3160,15 @@ bool ScintillaWin::IsCompatibleDC(HDC hOtherDC) const noexcept {
 	return isCompatible;
 }
 
-// https://docs.microsoft.com/en-us/windows/desktop/api/oleidl/nf-oleidl-idroptarget-dragenter
 DWORD ScintillaWin::EffectFromState(DWORD grfKeyState) const noexcept {
 	// These are the Wordpad semantics.
-	// DROPEFFECT_COPY not works for some applications like Github Atom.
-	DWORD dwEffect = DROPEFFECT_MOVE;
-#if 0
+	DWORD dwEffect;
 	if (inDragDrop == ddDragging)	// Internal defaults to move
 		dwEffect = DROPEFFECT_MOVE;
 	else
 		dwEffect = DROPEFFECT_COPY;
-	if ((grfKeyState & MK_CONTROL) && (grfKeyState & MK_SHIFT))
-		dwEffect = DROPEFFECT_LINK;
-	else
-	if (grfKeyState & (MK_ALT | MK_SHIFT))
+	if (grfKeyState & MK_ALT)
 		dwEffect = DROPEFFECT_MOVE;
-	else
-#endif
 	if (grfKeyState & MK_CONTROL)
 		dwEffect = DROPEFFECT_COPY;
 	return dwEffect;
@@ -3186,13 +3178,13 @@ DWORD ScintillaWin::EffectFromState(DWORD grfKeyState) const noexcept {
 STDMETHODIMP ScintillaWin::QueryInterface(REFIID riid, PVOID *ppv) noexcept {
 	*ppv = nullptr;
 	if (riid == IID_IUnknown)
-		*ppv = &dt;
+		*ppv = reinterpret_cast<IDropTarget *>(&dt);
 	if (riid == IID_IDropSource)
-		*ppv = &ds;
+		*ppv = reinterpret_cast<IDropSource *>(&ds);
 	if (riid == IID_IDropTarget)
-		*ppv = &dt;
+		*ppv = reinterpret_cast<IDropTarget *>(&dt);
 	if (riid == IID_IDataObject)
-		*ppv = &dob;
+		*ppv = reinterpret_cast<IDataObject *>(&dob);
 	if (!*ppv)
 		return E_NOINTERFACE;
 	return S_OK;
@@ -3206,110 +3198,19 @@ STDMETHODIMP_(ULONG) ScintillaWin::Release() noexcept {
 	return 1;
 }
 
-#if DebugDragAndDropDataFormat
-
-namespace {
-
-const char* GetStorageMediumType(DWORD tymed) noexcept {
-	switch (tymed) {
-	case TYMED_HGLOBAL:
-		return "TYMED_HGLOBAL";
-	case TYMED_FILE:
-		return "TYMED_FILE";
-	case TYMED_ISTREAM:
-		return "TYMED_ISTREAM";
-	case TYMED_ISTORAGE:
-		return "TYMED_ISTORAGE";
-	default:
-		return "Unknown";
-	}
-}
-
-const char* GetSourceFormatName(UINT fmt, char name[], int cchName) noexcept {
-	const int len = GetClipboardFormatNameA(fmt, name, cchName);
-	if (len <= 0) {
-		switch (fmt) {
-		case CF_TEXT:
-			return "CF_TEXT";
-		case CF_UNICODETEXT:
-			return "CF_UNICODETEXT";
-		case CF_HDROP:
-			return "CF_HDROP";
-		case CF_LOCALE:
-			return "CF_LOCALE";
-		case CF_OEMTEXT:
-			return "CF_OEMTEXT";
-		default:
-			return "Unknown";
-		}
-	}
-
-	return name;
-}
-
-}
-
-// https://docs.microsoft.com/en-us/windows/desktop/api/objidl/nf-objidl-idataobject-enumformatetc
-void ScintillaWin::EnumDataSourceFormat(const char *tag, LPDATAOBJECT pIDataSource) {
-	IEnumFORMATETC *fmtEnum = nullptr;
-	HRESULT hr = pIDataSource->EnumFormatEtc(DATADIR_GET, &fmtEnum);
-	if (hr == S_OK && fmtEnum) {
-		FORMATETC fetc[32] = {};
-		ULONG fetched = 0;
-		hr = fmtEnum->Next(sizeof(fetc) / sizeof(fetc[0]), fetc, &fetched);
-		if (fetched > 0) {
-			char name[1024];
-			char buf[2048];
-			for (ULONG i = 0; i < fetched; i++) {
-				const CLIPFORMAT fmt = fetc[i].cfFormat;
-				const DWORD tymed = fetc[i].tymed;
-				const char *typeName = GetStorageMediumType(tymed);
-				const char *fmtName = GetSourceFormatName(fmt, name, sizeof(name));
-				const int len = sprintf(buf, "%s: fmt[%lu]=%u, 0x%04X; tymed=%lu, %s; name=%s\n",
-					tag, i, fmt, fmt, tymed, typeName, fmtName);
-				InsertCharacter(std::string_view(buf, len), CharacterSource::directInput);
-			}
-		}
-	}
-	if (fmtEnum) {
-		fmtEnum->Release();
-	}
-}
-
-// https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-enumclipboardformats
-void ScintillaWin::EnumAllClipboardFormat(const char *tag) {
-	UINT fmt = 0;
-	unsigned int i = 0;
-	char name[1024];
-	char buf[2048];
-	while ((fmt = ::EnumClipboardFormats(fmt)) != 0) {
-		const char *fmtName = GetSourceFormatName(fmt, name, sizeof(name));
-		const int len = sprintf(buf, "%s: fmt[%u]=%u, 0x%04X; name=%s\n",
-			tag, i, fmt, fmt, fmtName);
-		InsertCharacter(std::string_view(buf, len), CharacterSource::tentativeInput);
-		i++;
-	}
-}
-
-#endif
-
 /// Implement IDropTarget
-STDMETHODIMP ScintillaWin::DragEnter(LPDATAOBJECT pIDataSource, DWORD grfKeyState, POINTL, PDWORD pdwEffect) {
+STDMETHODIMP ScintillaWin::DragEnter(LPDATAOBJECT pIDataSource, DWORD grfKeyState,
+                                     POINTL, PDWORD pdwEffect) {
 	if (!pIDataSource)
 		return E_POINTER;
-
-	//EnumDataSourceFormat("DragEnter", pIDataSource);
-
-	hasOKText = false;
-	for (const CLIPFORMAT fmt : dropFormat) {
-		FORMATETC fmtu = { fmt, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+	FORMATETC fmtu = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 		const HRESULT hrHasUText = pIDataSource->QueryGetData(&fmtu);
 		hasOKText = (hrHasUText == S_OK);
-		if (hasOKText) {
-			break;
-		}
+	if (!hasOKText) {
+		FORMATETC fmte = {CF_TEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+		const HRESULT hrHasText = pIDataSource->QueryGetData(&fmte);
+		hasOKText = (hrHasText == S_OK);
 	}
-
 	if (!hasOKText) {
 		*pdwEffect = DROPEFFECT_NONE;
 		return S_OK;
@@ -3350,7 +3251,8 @@ STDMETHODIMP ScintillaWin::DragLeave() {
 	return E_FAIL;
 }
 
-STDMETHODIMP ScintillaWin::Drop(LPDATAOBJECT pIDataSource, DWORD grfKeyState, POINTL pt, PDWORD pdwEffect) {
+STDMETHODIMP ScintillaWin::Drop(LPDATAOBJECT pIDataSource, DWORD grfKeyState,
+                                POINTL pt, PDWORD pdwEffect) {
 	try {
 		*pdwEffect = EffectFromState(grfKeyState);
 
@@ -3359,62 +3261,13 @@ STDMETHODIMP ScintillaWin::Drop(LPDATAOBJECT pIDataSource, DWORD grfKeyState, PO
 
 		SetDragPosition(SelectionPosition(Sci::invalidPosition));
 
-		std::vector<char> data;	// Includes terminating NUL
-		bool fileDrop = false;
-		bool succeed = false;
-		HRESULT hr = DV_E_FORMATETC;
+		STGMEDIUM medium {};
 
-		//EnumDataSourceFormat("Drop", pIDataSource);
-		for (const CLIPFORMAT fmt : dropFormat) {
-			FORMATETC fmtu = { fmt, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-			STGMEDIUM medium = {};
-			hr = pIDataSource->GetData(&fmtu, &medium);
-			succeed = false;
+		std::vector<char> data;	// Includes terminating NUL
+
+		FORMATETC fmtu = {CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+		HRESULT hr = pIDataSource->GetData(&fmtu, &medium);
 			if (SUCCEEDED(hr) && medium.hGlobal) {
-				// File Drop
-				if (fmt == CF_HDROP
-#if EnableDrop_VisualStudioProjectItem
-					|| fmt == cfVSStgProjectItem || fmt == cfVSRefProjectItem
-#endif
-					) {
-					WCHAR pathDropped[1024];
-					HDROP hDrop = static_cast<HDROP>(medium.hGlobal);
-					if (::DragQueryFileW(hDrop, 0, pathDropped, sizeof(pathDropped)/sizeof(WCHAR)) > 0) {
-						WCHAR *p = pathDropped;
-#if EnableDrop_VisualStudioProjectItem
-						if (fmt == cfVSStgProjectItem || fmt == cfVSRefProjectItem) {
-							// {UUID}|Solution\Project.[xx]proj|path
-							WCHAR *t = StrRChrW(p, nullptr, L'|');
-							if (t) {
-								p = t + 1;
-							}
-						}
-#endif
-						// Convert UTF-16 to UTF-8
-						const std::wstring_view wsv(p);
-						const size_t dataLen = UTF8Length(wsv);
-						fileDrop = succeed = dataLen != 0;
-						data.resize(dataLen + 1); // NUL
-						UTF8FromUTF16(wsv, data.data(), dataLen);
-					}
-					// TODO: This seems not required, MSDN only says it need be called in WM_DROPFILES
-					::DragFinish(hDrop);
-				}
-#if Enable_ChromiumWebCustomMIMEDataFormat
-				else if (fmt == cfChromiumCustomMIME) {
-					GlobalMemory memUDrop(medium.hGlobal);
-					const wchar_t *udata = static_cast<const wchar_t *>(memUDrop.ptr);
-					if (udata) {
-						const size_t tlen = memUDrop.Size();
-						const std::wstring_view wsv(udata, tlen / 2);
-						// parse file url: "resource":"file:///path"
-						const size_t dataLen = UTF8Length(wsv);
-					}
-					memUDrop.Unlock();
-				}
-#endif
-				// Unicode Text
-				else if (fmt == CF_UNICODETEXT) {
 					GlobalMemory memUDrop(medium.hGlobal);
 					const wchar_t *udata = static_cast<const wchar_t *>(memUDrop.ptr);
 					if (udata) {
@@ -3423,9 +3276,8 @@ STDMETHODIMP ScintillaWin::Drop(LPDATAOBJECT pIDataSource, DWORD grfKeyState, PO
 							// Convert UTF-16 to UTF-8
 							const std::wstring_view wsv(udata, tlen / 2);
 							const size_t dataLen = UTF8Length(wsv);
-							succeed = dataLen != 0;
-							data.resize(dataLen + 1);
-							UTF8FromUTF16(wsv, data.data(), dataLen);
+					data.resize(dataLen);
+					UTF8FromUTF16(wsv, &data[0], dataLen);
 						} else {
 							// Convert UTF-16 to ANSI
 							//
@@ -3434,56 +3286,28 @@ STDMETHODIMP ScintillaWin::Drop(LPDATAOBJECT pIDataSource, DWORD grfKeyState, PO
 							// Convert from Unicode to current Scintilla code page
 							const UINT cpDest = CodePageOfDocument();
 							const int tlen = MultiByteLenFromWideChar(cpDest, udata);
-							succeed = tlen != 0;
 							data.resize(tlen);
-							MultiByteFromWideChar(cpDest, udata, data.data(), tlen);
+					MultiByteFromWideChar(cpDest, udata, &data[0], tlen);
 						}
 					}
 					memUDrop.Unlock();
-				}
-				// ANSI Text
-				else if (fmt == CF_TEXT) {
+		} else {
+			FORMATETC fmte = {CF_TEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+			hr = pIDataSource->GetData(&fmte, &medium);
+			if (SUCCEEDED(hr) && medium.hGlobal) {
 					GlobalMemory memDrop(medium.hGlobal);
 					const char *cdata = static_cast<const char *>(memDrop.ptr);
-					if (cdata) {
-						const size_t bytes = memDrop.Size();
-						const size_t len = strnlen(cdata, bytes);
-						// In Unicode mode, convert text to UTF-8
-						if (IsUnicodeMode()) {
-							std::vector<wchar_t> uptr(len + 1);
-
-							const int ilen = static_cast<int>(len);
-							const size_t ulen = WideCharFromMultiByte(CP_ACP,
-								std::string_view(cdata, ilen), uptr.data(), ilen + 1);
-
-							const std::wstring_view wsv(uptr.data(), ulen);
-							const size_t mlen = UTF8Length(wsv);
-							succeed = mlen != 0;
-							data.resize(mlen + 1);
-							UTF8FromUTF16(wsv, data.data(), mlen);
-						} else {
-							succeed = len != 0;
-							data.assign(cdata, cdata + len);
-						}
-					}
+				if (cdata)
+					data.assign(cdata, cdata+strlen(cdata));
 					memDrop.Unlock();
 				}
 			}
 
-			::ReleaseStgMedium(&medium);
-			if (succeed) {
-				break;
-			}
-		}
-
-		if (!succeed) {
-			//Platform::DebugPrintf("Bad data format: 0x%lx\n", hr);
+		if (!SUCCEEDED(hr) || data.empty()) {
+			//Platform::DebugPrintf("Bad data format: 0x%x\n", hres);
 			return hr;
 		}
 
-		if (fileDrop) {
-			NotifyURIDropped(data.data());
-		} else {
 			FORMATETC fmtr = { cfColumnSelect, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 			const HRESULT hrRectangular = pIDataSource->QueryGetData(&fmtr);
 
@@ -3491,8 +3315,13 @@ STDMETHODIMP ScintillaWin::Drop(LPDATAOBJECT pIDataSource, DWORD grfKeyState, PO
 			::ScreenToClient(MainHWND(), &rpt);
 			const SelectionPosition movePos = SPositionFromLocation(PointFromPOINT(rpt), false, false, UserVirtualSpace());
 
-			DropAt(movePos, data.data(), data.size(), *pdwEffect == DROPEFFECT_MOVE, hrRectangular == S_OK);
-		}
+		DropAt(movePos, &data[0], data.size(), *pdwEffect == DROPEFFECT_MOVE, hrRectangular == S_OK);
+
+		// Free data
+		if (medium.pUnkForRelease)
+			medium.pUnkForRelease->Release();
+		else
+			::GlobalFree(medium.hGlobal);
 
 		return S_OK;
 	} catch (...) {
@@ -3523,9 +3352,10 @@ STDMETHODIMP ScintillaWin::GetData(FORMATETC *pFEIn, STGMEDIUM *pSTM) {
 		const size_t uchars = UTF16Length(sv);
 		text.Allocate(2 * uchars);
 		if (text) {
-			UTF16FromUTF8(sv, static_cast<wchar_t *>(text.ptr), uchars);
+			UTF16FromUTF8(sv,
+				static_cast<wchar_t *>(text.ptr), uchars);
 		}
-	} else if (pFEIn->cfFormat == CF_TEXT) {
+	} else {
 		text.Allocate(drag.LengthWithTerminator());
 		if (text) {
 			memcpy(text.ptr, drag.Data(), drag.LengthWithTerminator());
@@ -3607,7 +3437,7 @@ BOOL ScintillaWin::CreateSystemCaret() {
 		sysCaretHeight;
 	std::vector<BYTE> bits(bitmapSize);
 	sysCaretBitmap = ::CreateBitmap(sysCaretWidth, sysCaretHeight, 1,
-		1, bits.data());
+		1, &bits[0]);
 	const BOOL retval = ::CreateCaret(
 		MainHWND(), sysCaretBitmap,
 		sysCaretWidth, sysCaretHeight);
